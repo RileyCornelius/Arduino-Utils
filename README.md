@@ -1,2 +1,2 @@
 # Utils-PlatformIO
- A collection of utilities files to be using in PlatformIO projects.
+ A collection of utilities to be using in PlatformIO projects.
