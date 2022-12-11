@@ -9,8 +9,8 @@
 class AbstractTimer
 {
 protected:
-    uint32_t _prevTrigger;
-    uint32_t _period;
+    uint32_t prevTrigger;
+    uint32_t period;
 
 public:
     AbstractTimer()
@@ -25,14 +25,14 @@ public:
     }
 
     virtual uint32_t getTime() = 0; // pure virtual
-    uint32_t getPeriod() { return _period; }
-    uint32_t getElapsed() { return getTime() - _prevTrigger; }
-    uint32_t getRemaining() { return _period - getElapsed(); }
-    void setPeriod(uint32_t period) { _period = period; }
-    void reset() { _prevTrigger = getTime(); }
+    uint32_t getPeriod() { return period; }
+    uint32_t getElapsed() { return getTime() - prevTrigger; }
+    uint32_t getRemaining() { return period - getElapsed(); }
+    void setPeriod(uint32_t period) { period = period; }
+    void reset() { prevTrigger = getTime(); }
     virtual bool ready()
     {
-        bool isReady = (getElapsed() >= _period);
+        bool isReady = (getElapsed() >= period);
         if (isReady)
         {
             reset();
@@ -62,7 +62,7 @@ public:
     void setCallback(func_t funcCallback) { _pFuncCallback = funcCallback; }
     bool ready() override
     {
-        bool isReady = (getElapsed() >= _period);
+        bool isReady = (getElapsed() >= period);
         if (isReady)
         {
             reset();

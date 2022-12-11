@@ -5,66 +5,66 @@
 // #if defined(NRF52)
 // #if defined(ESP32)
 
-#if defined(ARDUINO_ARCH_AVR)
+#if defined(ARDUINO_ARCH_STM32)
 class DigitalOutput
 {
 private:
-    uint8_t _pin;
+    PinName pin;
 
 public:
     DigitalOutput(){};
-    DigitalOutput(uint8_t pin) { setPin(pin); }
+    DigitalOutput(uint8_t pinNumber) { setPin(pinNumber); }
 
     /**
-     * \param pin The pin number of the digital output
+     * \param pinNumber The pin number of the digital output
      */
-    void setPin(uint8_t pin)
+    void setPin(uint8_t pinNumber)
     {
-        _pin = pin;
-        pinMode(_pin, OUTPUT);
+        pin = digitalPinToPinName(pin);
+        pinMode(pin, OUTPUT);
     }
 
-    void on() { digitalWrite(_pin, HIGH); }
+    void on() { digitalWriteFast(pin, HIGH); }
 
-    void off() { digitalWrite(_pin, LOW); }
+    void off() { digitalWriteFast(pin, LOW); }
 
-    void toggle() { digitalWrite(_pin, ~digitalRead(_pin)); }
+    void toggle() { digitalToggleFast(pin); }
 
     /**
      * \param scale Duty cycle of the pulse width modulation with a scale of 0-255
      */
-    void pwm(uint8_t scale) { analogWrite(_pin, scale); }
+    void pwm(uint8_t scale) { analogWrite(pin, scale); }
 };
 
-#elif defined(ARDUINO_ARCH_STM32)
+#else
 class DigitalOutput
 {
 private:
-    PinName _pin;
+    uint8_t pin;
 
 public:
     DigitalOutput(){};
-    DigitalOutput(uint8_t pin) { setPin(pin); }
+    DigitalOutput(uint8_t pinNumber) { setPin(pinNumber); }
 
     /**
-     * \param pin The pin number of the digital output
+     * \param pinNumber The pin number of the digital output
      */
-    void setPin(uint8_t pin)
+    void setPin(uint8_t pinNumber)
     {
-        _pin = digitalPinToPinName(pin);
-        pinMode(_pin, OUTPUT);
+        pin = pinNumber;
+        pinMode(pin, OUTPUT);
     }
 
-    void on() { digitalWriteFast(_pin, HIGH); }
+    void on() { digitalWrite(pin, HIGH); }
 
-    void off() { digitalWriteFast(_pin, LOW); }
+    void off() { digitalWrite(pin, LOW); }
 
-    void toggle() { digitalToggleFast(_pin); }
+    void toggle() { digitalWrite(pin, !digitalRead(pin)); }
 
     /**
      * \param scale Duty cycle of the pulse width modulation with a scale of 0-255
      */
-    void pwm(uint8_t scale) { analogWrite(_pin, scale); }
+    void pwm(uint8_t scale) { analogWrite(pin, scale); }
 };
 
 #endif

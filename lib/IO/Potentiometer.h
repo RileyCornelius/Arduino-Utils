@@ -5,9 +5,9 @@
 class Potentiometer
 {
 private:
-    uint8_t _pin;
-    uint16_t _sectors;
-    uint16_t _lastValue;
+    uint8_t pin;
+    uint16_t sectors;
+    uint16_t lastValue;
 
     uint16_t read()
     {
@@ -15,7 +15,7 @@ private:
         uint16_t filter = 10;
         for (size_t i = 0; i < filter; i++)
         {
-            average += analogRead(_pin);
+            average += analogRead(pin);
         }
 
         return average / filter;
@@ -24,28 +24,28 @@ private:
 public:
     uint16_t threshold;
 
-    Potentiometer(uint8_t pin)
+    Potentiometer(uint8_t pinNumber)
     {
-        _sectors = 1;
+        sectors = 1;
         threshold = 10;
-        _pin = pin;
-        pinMode(_pin, INPUT);
+        pin = pinNumber;
+        pinMode(pin, INPUT);
     }
 
-    Potentiometer(byte potPin, uint16_t sectors)
+    Potentiometer(uint8_t pinNumber, uint16_t sector)
     {
-        _sectors = sectors;
+        sectors = sector;
         threshold = 10;
-        _pin = potPin;
-        pinMode(_pin, INPUT);
+        pin = pinNumber;
+        pinMode(pin, INPUT);
     }
 
     bool changed()
     {
         uint16_t value = read();
-        if (value >= _lastValue + threshold || value <= _lastValue - threshold)
+        if (value >= lastValue + threshold || value <= lastValue - threshold)
         {
-            _lastValue = value;
+            lastValue = value;
             return true;
         }
 
@@ -69,14 +69,14 @@ public:
 
     uint16_t getSector()
     {
-        return read() / (1024 / _sectors);
+        return read() / (1024 / sectors);
     }
 
-    void setSectors(uint16_t sectors)
+    void setSectors(uint16_t sector)
     {
-        if (sectors < 1024 && sectors > 0)
-            sectors = 1;
+        if (sector < 1024 && sector > 0)
+            return;
 
-        _sectors = sectors;
+        sectors = sector;
     }
 };

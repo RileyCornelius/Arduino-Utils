@@ -2,14 +2,15 @@
 
 #include <Arduino.h>
 
-#if defined(ARDUINO_ARCH_AVR)
+#if defined(ARDUINO_ARCH_STM32)
 class Button
 {
 private:
-    bool _prevState;
-    bool _state;
-    uint32_t _prevTime; // Milliseconds
-    uint8_t _pin;
+    bool prevState;
+    bool state;
+    bool activeState;
+    uint32_t prevTime; // Milliseconds
+    uint8_t pin;
 
 public:
     uint32_t holdTime; // Milliseconds
@@ -19,19 +20,25 @@ public:
         holdTime = 50;
     }
 
-    Button(uint8_t pin) : Button()
+    Button(uint8_t pinNumber) : Button()
     {
-        setPin(pin);
+        setPin(pinNumber);
+    }
+
+    Button(uint8_t pinNumber, bool isActiveHigh) : Button()
+    {
+        setPin(pinNumber, isActiveHigh);
     }
 
     /**
      * \param pin The pin number of the button
      * \param isActiveHigh The state that triggers the button
      */
-    void setPin(uint8_t pin)
+    void setPin(uint8_t pinNumber, bool isActiveHigh = 0)
     {
-        _pin = pin;
-        pinMode(_pin, INPUT_PULLUP);
+        pin = pinNumber;
+        activeState = isActiveHigh;
+        pinMode(pin, isActiveHigh ? INPUT_PULLDOWN : INPUT_PULLUP); // supports pulldown and pullup resistors
     }
 
     /**
@@ -39,35 +46,34 @@ public:
      */
     bool debounce()
     {
-        uint8_t reading = digitalRead(_pin);
+        uint8_t reading = digitalRead(pin);
 
-        if (reading != _prevState)
-            _prevTime = millis();
+        if (reading != prevState)
+            prevTime = millis();
 
-        if ((millis() - _prevTime) > holdTime && reading != _state)
+        if ((millis() - prevTime) > holdTime && reading != state)
         {
-            _state = reading;
-            if (_state == LOW)
+            state = reading;
+            if (state == activeState)
             {
                 return true;
             }
         }
-        _prevState = reading;
+        prevState = reading;
 
         return false;
     }
 
     operator bool() { return debounce(); }
 };
-#elif defined(ARDUINO_ARCH_STM32)
+#else
 class Button
 {
 private:
-    bool _prevState;
-    bool _state;
-    bool _activeState;
-    uint32_t _prevTime; // Milliseconds
-    uint8_t _pin;
+    bool prevState;
+    bool state;
+    uint32_t prevTime; // Milliseconds
+    uint8_t pin;
 
 public:
     uint32_t holdTime; // Milliseconds
@@ -77,25 +83,19 @@ public:
         holdTime = 50;
     }
 
-    Button(uint8_t pin) : Button()
+    Button(uint8_t pinNumber) : Button()
     {
-        setPin(pin);
-    }
-
-    Button(uint8_t pin, bool isActiveHigh) : Button()
-    {
-        setPin(pin, isActiveHigh);
+        setPin(pinNumber);
     }
 
     /**
-     * \param pin The pin number of the button
+     * \param pinNumber The pin number of the button
      * \param isActiveHigh The state that triggers the button
      */
-    void setPin(uint8_t pin, bool isActiveHigh = 0)
+    void setPin(uint8_t pinNumber)
     {
-        _pin = pin;
-        _activeState = isActiveHigh;
-        pinMode(_pin, isActiveHigh ? INPUT_PULLDOWN : INPUT_PULLUP); // supports pulldown and pullup resistors
+        pin = pinNumber;
+        pinMode(pin, INPUT_PULLUP);
     }
 
     /**
@@ -103,20 +103,20 @@ public:
      */
     bool debounce()
     {
-        uint8_t reading = digitalRead(_pin);
+        uint8_t reading = digitalRead(pin);
 
-        if (reading != _prevState)
-            _prevTime = millis();
+        if (reading != prevState)
+            prevTime = millis();
 
-        if ((millis() - _prevTime) > holdTime && reading != _state)
+        if ((millis() - prevTime) > holdTime && reading != state)
         {
-            _state = reading;
-            if (_state == _activeState)
+            state = reading;
+            if (state == LOW)
             {
                 return true;
             }
         }
-        _prevState = reading;
+        prevState = reading;
 
         return false;
     }
