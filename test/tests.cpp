@@ -3,8 +3,8 @@
 #include <unity.h>
 #include <Arduino.h>
 #include <LinkedList.h>
-#include <SimpleTimer.h>
-#include <DigitalOutput.h>
+// #include <SimpleTimer.h>
+// #include <DigitalOutput.h>
 
 /*------------------------------------------------------------------------------
  * TESTS
@@ -45,9 +45,9 @@ void CircularLinkedListTest()
     LinkedListNode<int> *first = list.first();
     LinkedListNode<int> *last = list.last();
 
-    // TEST_ASSERT_EQUAL(2, first->value);
-
-    TEST_ASSERT_EQUAL(first->value, last->next->value);
+    TEST_ASSERT_EQUAL(first->value, last->next->value); // is circular
+    TEST_ASSERT_EQUAL(3, list.size());                  // size correct
+    TEST_ASSERT_EQUAL(3, list.get(1)->value);           // get correct index
 }
 
 /*------------------------------------------------------------------------------

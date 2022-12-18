@@ -1,10 +1,13 @@
 #pragma once
 
-#include <Arduino.h>
+#include <stdint.h>
 
-/*---------------------------------------------------------------------------------------
+// * Note: Adding a stack allocated node to the list will cause a crash on deletion
+
+/**--------------------------------------------------------------------------------------
  * Example
  *-------------------------------------------------------------------------------------*/
+
 //   LinkedList<int> list;
 //   list.add(1);
 //   list.add(2);
@@ -12,9 +15,15 @@
 //   list.removeFirst();
 //   Serial.println(list.first()->value); // prints 2
 
-/*---------------------------------------------------------------------------------------
+/**--------------------------------------------------------------------------------------
  * Node for Linked List
  *-------------------------------------------------------------------------------------*/
+
+/**
+ * Node for circular doubly linked list
+ * \tparam T Node type
+ * \param value Node data
+ */
 template <class T>
 class LinkedListNode
 {
@@ -25,9 +34,14 @@ public:
     LinkedListNode(T value) : next(nullptr), prev(nullptr), value(value) {}
 };
 
-/*---------------------------------------------------------------------------------------
+/**--------------------------------------------------------------------------------------
  * Circular Doubly Linked List
  *-------------------------------------------------------------------------------------*/
+
+/**
+ * Circular doubly linked list
+ * \tparam T LinkedListNode type
+ */
 template <class T>
 class LinkedList
 {
@@ -35,12 +49,12 @@ private:
     LinkedListNode<T> *head;
     uint16_t count;
 
-    void insertNodeToEmptyList(LinkedListNode<T> *node)
+    void insertNodeToEmptyList(LinkedListNode<T> *newNode)
     {
         // Set the head and tail to the new node
-        head = node;
-        head->next = node;
-        head->prev = node;
+        head = newNode;
+        head->next = newNode;
+        head->prev = newNode;
         // Keep track of the count of nodes
         count++;
     }
@@ -89,20 +103,13 @@ private:
 public:
     LinkedList() : head(nullptr), count(0) {}
 
-    // TODO: ERRORS - corrupt heap: assert failed: multi_heap_free multi_heap_poisoning
-    // ~LinkedList()
-    // {
-    //     // Delete all the elements in the list
-    //     while (head != nullptr)
-    //     {
-    //         LinkedListNode<T> *temp = head;
-    //         head = head->next;
-    //         delete temp;
-    //     }
-    // }
+    ~LinkedList()
+    {
+        clear();
+    }
 
     /**
-     * \return Pointer to first element of the list
+     * \return Pointer to first node of the list
      */
     LinkedListNode<T> *first()
     {
@@ -110,7 +117,7 @@ public:
     }
 
     /**
-     * \return Pointer to last element of the list
+     * \return Pointer to last node of the list
      */
     LinkedListNode<T> *last()
     {
@@ -126,7 +133,7 @@ public:
     }
 
     /**
-     * \brief Adds a node to the end of the list
+     * Adds a node to the end of the list
      * \param node Linked list node to be stored
      */
     void add(LinkedListNode<T> *node)
@@ -142,19 +149,18 @@ public:
     }
 
     /**
-     * \brief Adds an element to the end of the list
+     * Adds an element to the end of the list
      * \param value Data to be stored in the new node
      */
     void add(T value)
     {
         // Create new node with past value
         LinkedListNode<T> *node = new LinkedListNode<T>(value);
-
         add(node);
     }
 
     /**
-     * \brief Adds a node at the given index
+     * Adds a node at the given index
      * \param node Linked list node to be stored
      * \param index The index of where to store to node
      */
@@ -173,10 +179,8 @@ public:
         }
     }
 
-    // Add an element at the given index
-
     /**
-     * \brief Adds an element at the given index
+     * Adds an element at the given index
      * \param value Data to be stored in the new node
      * \param index The index of where to store to node
      */
@@ -184,12 +188,11 @@ public:
     {
         // Create new node with past value
         LinkedListNode<T> *node = new LinkedListNode<T>(value);
-
         add(node);
     }
 
     /**
-     * \brief Adds a new node to the beginning of the list
+     * Adds a new node to the beginning of the list
      * \param node Linked list node to be stored
      */
     void addFirst(LinkedListNode<T> *node)
@@ -200,25 +203,24 @@ public:
         }
         else
         {
-            insertNodeBefore(head, node);
-            head = node; // Move new node to the head
+            insertNodeBefore(head, node); // Add new node before the head
+            head = node;                  // Then make new node the head
         }
     }
 
     /**
-     * \brief Adds an element to the beginning of the list
+     * Adds an element to the beginning of the list
      * \param value Data to be stored in the new node
      */
     void addFirst(T value)
     {
         // Create new node with past value
         LinkedListNode<T> *node = new LinkedListNode<T>(value);
-
         addFirst(node);
     }
 
     /**
-     * \brief Removes the head node from the list
+     * Removes the head node from the list
      */
     void removeFirst()
     {
@@ -226,7 +228,7 @@ public:
     }
 
     /**
-     * \brief Removes the tail node from the list
+     * Removes the tail node from the list
      */
     void removeLast()
     {
@@ -234,7 +236,8 @@ public:
     }
 
     /**
-     * \brief Removes the node at the given index
+     * Removes the node at the given index
+     * \param index The index of where the node is stored
      */
     void remove(uint16_t index)
     {
@@ -242,7 +245,7 @@ public:
     }
 
     /**
-     * \brief Gets a node at the given index
+     * Gets a node at the given index
      * \param index The index of where the node is stored
      * \return Pointer to node from the linked list
      */
@@ -250,7 +253,7 @@ public:
     {
         if (index >= count) // Index out of bounds
         {
-            return nullptr;
+            return nullptr; //
         }
 
         LinkedListNode<T> *current = head;
@@ -260,5 +263,18 @@ public:
         }
 
         return current;
+    }
+
+    /**
+     * Clears list
+     */
+    void clear()
+    {
+        LinkedListNode<T> *node = head;
+        for (size_t i = 0; i < count; i++)
+        {
+            removeNode(node);
+            node = node->next;
+        }
     }
 };
