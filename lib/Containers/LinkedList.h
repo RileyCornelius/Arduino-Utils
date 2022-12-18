@@ -9,11 +9,11 @@
  *-------------------------------------------------------------------------------------*/
 
 //   LinkedList<int> list;
-//   list.add(1);
-//   list.add(2);
-//   list.add(3);
+//   list.addLast(1);
+//   list.addLast(2);
+//   list.addLast(3);
 //   list.removeFirst();
-//   Serial.println(list.first()->value); // prints 2
+//   Serial.println(list.getFirst()->value); // prints 2
 
 /**--------------------------------------------------------------------------------------
  * Node for Linked List
@@ -102,26 +102,23 @@ private:
 
 public:
     LinkedList() : head(nullptr), count(0) {}
-
     ~LinkedList()
     {
         clear();
     }
 
     /**
-     * \return Pointer to first node of the list
+     * Clears the list
      */
-    LinkedListNode<T> *first()
+    void clear()
     {
-        return head;
-    }
-
-    /**
-     * \return Pointer to last node of the list
-     */
-    LinkedListNode<T> *last()
-    {
-        return head->prev;
+        LinkedListNode<T> *node = head;
+        for (size_t i = 0; i < count; i++)
+        {
+            removeNode(node);
+            node = node->next;
+        }
+        head = nullptr;
     }
 
     /**
@@ -130,33 +127,6 @@ public:
     uint16_t size()
     {
         return count;
-    }
-
-    /**
-     * Adds a node to the end of the list
-     * \param node Linked list node to be stored
-     */
-    void add(LinkedListNode<T> *node)
-    {
-        if (head == nullptr) // If the list is empty
-        {
-            insertNodeToEmptyList(node);
-        }
-        else
-        {
-            insertNodeBefore(head, node);
-        }
-    }
-
-    /**
-     * Adds an element to the end of the list
-     * \param value Data to be stored in the new node
-     */
-    void add(T value)
-    {
-        // Create new node with past value
-        LinkedListNode<T> *node = new LinkedListNode<T>(value);
-        add(node);
     }
 
     /**
@@ -192,7 +162,7 @@ public:
     }
 
     /**
-     * Adds a new node to the beginning of the list
+     * Adds a node to the beginning of the list
      * \param node Linked list node to be stored
      */
     void addFirst(LinkedListNode<T> *node)
@@ -203,7 +173,7 @@ public:
         }
         else
         {
-            insertNodeBefore(head, node); // Add new node before the head
+            insertNodeBefore(head, node); // Add new node to the tail
             head = node;                  // Then make new node the head
         }
     }
@@ -220,19 +190,39 @@ public:
     }
 
     /**
-     * Removes the head node from the list
+     * Adds a node to the end of the list
+     * \param node Linked list node to be stored
      */
-    void removeFirst()
+    void addLast(LinkedListNode<T> *node)
     {
-        removeNode(head);
+        if (head == nullptr) // If the list is empty
+        {
+            insertNodeToEmptyList(node);
+        }
+        else
+        {
+            insertNodeBefore(head, node); // Add new node to the tail
+        }
     }
 
     /**
-     * Removes the tail node from the list
+     * Adds an element to the end of the list
+     * \param value Data to be stored in the new node
      */
-    void removeLast()
+    void addLast(T value)
     {
-        removeNode(head->prev);
+        // Create new node with past value
+        LinkedListNode<T> *node = new LinkedListNode<T>(value);
+        addLast(node);
+    }
+
+    /**
+     * Removes the given node
+     * \param node Linked list node to be removed
+     */
+    void remove(LinkedListNode<T> *node)
+    {
+        removeNode(node);
     }
 
     /**
@@ -245,15 +235,31 @@ public:
     }
 
     /**
+     * Removes the node from the beginning of the list
+     */
+    void removeFirst()
+    {
+        removeNode(head);
+    }
+
+    /**
+     * Removes the node from the end of the list
+     */
+    void removeLast()
+    {
+        removeNode(head->prev);
+    }
+
+    /**
      * Gets a node at the given index
      * \param index The index of where the node is stored
-     * \return Pointer to node from the linked list
+     * \return Pointer to node at the given index from the list
      */
     LinkedListNode<T> *get(uint16_t index)
     {
         if (index >= count) // Index out of bounds
         {
-            return nullptr; //
+            return nullptr;
         }
 
         LinkedListNode<T> *current = head;
@@ -266,15 +272,20 @@ public:
     }
 
     /**
-     * Clears list
+     * Gets the beginning node
+     * \return Pointer to first node of the list
      */
-    void clear()
+    LinkedListNode<T> *getFirst()
     {
-        LinkedListNode<T> *node = head;
-        for (size_t i = 0; i < count; i++)
-        {
-            removeNode(node);
-            node = node->next;
-        }
+        return head;
+    }
+
+    /**
+     * Gets the ending node
+     * \return Pointer to last node of the list
+     */
+    LinkedListNode<T> *getLast()
+    {
+        return head->prev;
     }
 };

@@ -34,16 +34,16 @@ void CircularLinkedListTest()
 {
     LinkedList<int> list;
     list.addFirst(new LinkedListNode<int>(1));
-    list.addFirst(new LinkedListNode<int>(2));
-    list.add(new LinkedListNode<int>(3));
-    list.add(new LinkedListNode<int>(4));
-    list.add(5);
+    list.addLast(new LinkedListNode<int>(2));
+    list.addLast(new LinkedListNode<int>(3));
+    list.addLast(4);
+    list.addLast(5);
 
-    list.removeLast();
     list.removeFirst();
+    list.removeLast();
 
-    LinkedListNode<int> *first = list.first();
-    LinkedListNode<int> *last = list.last();
+    LinkedListNode<int> *first = list.getFirst();
+    LinkedListNode<int> *last = list.getLast();
 
     TEST_ASSERT_EQUAL(first->value, last->next->value); // is circular
     TEST_ASSERT_EQUAL(3, list.size());                  // size correct
