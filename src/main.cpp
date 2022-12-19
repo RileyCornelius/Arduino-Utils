@@ -3,8 +3,10 @@
 #include <Button.h>
 #include <SimpleTimer.h>
 #include <DigitalOutput.h>
-#include <types.h>
+#include <Types.h>
 #include <LinkedList.h>
+#define LOG_LEVEL I_LOG_LEVEL_INFO
+#include <Logger.h>
 
 uint16 x = 0;
 uint32 count = 0;
@@ -28,6 +30,7 @@ void timerLedTest()
     led.toggle();
   }
 }
+
 void CircularLinkedListStackTest()
 {
   LinkedList<int> list;
@@ -66,6 +69,14 @@ void CircularLinkedListTest()
   Serial.println("-----------");
 }
 
+void loggerTest()
+{
+  LOG_DEBUG("1");
+  LOG_INFO("2");
+  LOG_WARN("3");
+  LOG_ERROR("4");
+}
+
 void setup()
 {
   Serial.begin(9600);
@@ -74,7 +85,7 @@ void setup()
 void loop()
 {
   delay(1000);
-  CircularLinkedListTest();
-
-  timerLedTest();
+  // CircularLinkedListTest();
+  // timerLedTest();
+  loggerTest();
 }

@@ -1,8 +1,9 @@
 #pragma once
 
 // Defines
-#include "defines.h"
-#include "types.h"
+#include "Defines.h"
+#include "Types.h"
+#include "Logger.h"
 
 // IO
 #include "Button.h"

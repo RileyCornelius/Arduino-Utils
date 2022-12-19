@@ -2,6 +2,10 @@
 
 #include <Arduino.h>
 
+/**--------------------------------------------------------------------------------------
+ * Simple Timer Class
+ *-------------------------------------------------------------------------------------*/
+
 class Timer
 {
 protected:
@@ -37,8 +41,24 @@ public:
     operator bool() { return ready(); }
 };
 
+/**--------------------------------------------------------------------------------------
+ * Benchmark Macros
+ *-------------------------------------------------------------------------------------*/
+
+// Creates a static benchmark timer
+// Use BENCHMARK_END or BENCHMARK_PRINT_END to get elapsed time
+#define BENCHMARK_BEGIN                 \
+    static Timer _benchmark_ = Timer(); \
+    _benchmark_.reset();
+// Creates elapsed time variable
+#define BENCHMARK_END uint32_t _elapsed_ = _benchmark_.getElapsed();
+// Prints elapsed time
+#define BENCHMARK_PRINT_END(message)               \
+    uint32_t _elapsed_ = _benchmark_.getElapsed(); \
+    Serial.println(message + _elapsed_ + " ms");
+
 /*------------------------------------------------------------------------------
- * TIMER MACROS
+ * Timer Macros
  *----------------------------------------------------------------------------*/
 
 #ifndef EVERY_N_MILLIS
@@ -47,7 +67,7 @@ public:
 // {
 // do something every 1000 miliseconds
 // }
-#define EVERY_N_MILLIS(N) EVERY_N_MILLIS_I(CONCAT(__timer, __COUNTER__), N)
+#define EVERY_N_MILLIS(N) EVERY_N_MILLIS_I(CONCAT(_timer_, __COUNTER__), N)
 #define EVERY_N_MILLIS_I(NAME, N) \
     static Timer NAME = Timer(N); \
     if (NAME)
