@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 /**--------------------------------------------------------------------------------------
- * Simple Timer Class
+ * Millis Timer Class
  *-------------------------------------------------------------------------------------*/
 
 class Timer
@@ -13,16 +13,14 @@ protected:
     uint32_t period;
 
 public:
-    /**
-     * @param period Set the period in miliseconds
-     */
+    Timer() { reset(); };
     Timer(uint32_t period)
     {
         reset();
         setPeriod(period);
     }
 
-    uint32_t getTime() { return millis(); }
+    virtual uint32_t getTime() { return millis(); }
     uint32_t getPeriod() { return period; }
     uint32_t getElapsed() { return getTime() - prevTrigger; }
     uint32_t getRemaining() { return period - getElapsed(); }
@@ -42,38 +40,68 @@ public:
 };
 
 /**--------------------------------------------------------------------------------------
- * Benchmark Macros
+ * Micros Timer Class
  *-------------------------------------------------------------------------------------*/
 
-// Creates a static benchmark timer
-// Use BENCHMARK_END or BENCHMARK_PRINT_END to get elapsed time
-#define BENCHMARK_BEGIN                 \
-    static Timer _benchmark_ = Timer(); \
-    _benchmark_.reset();
-// Creates elapsed time variable
-#define BENCHMARK_END uint32_t _elapsed_ = _benchmark_.getElapsed();
-// Prints elapsed time
-#define BENCHMARK_PRINT_END(message)               \
-    uint32_t _elapsed_ = _benchmark_.getElapsed(); \
-    Serial.println(message + _elapsed_ + " ms");
+class TimerMicros : public Timer
+{
+    using Timer::Timer; // inherit constructors
+public:
+    uint32_t getTime() override { return micros(); };
+};
 
 /*------------------------------------------------------------------------------
  * Timer Macros
  *----------------------------------------------------------------------------*/
 
 #ifndef EVERY_N_MILLIS
-
 // EVERY_N_MILLIS(1000)
 // {
 // do something every 1000 miliseconds
 // }
-#define EVERY_N_MILLIS(N) EVERY_N_MILLIS_I(CONCAT(_timer_, __COUNTER__), N)
-#define EVERY_N_MILLIS_I(NAME, N) \
-    static Timer NAME = Timer(N); \
-    if (NAME)
+#define EVERY_N_MILLIS(n) I_EVERY_N_MILLIS(CONCAT(_timer_, __COUNTER__), n)
+#define I_EVERY_N_MILLIS(name, n) \
+    static Timer name = Timer(n); \
+    if (name.ready())
+
+// EVERY_N_MICROS(1000)
+// {
+// do something every 1000 microseconds
+// }
+#define EVERY_N_MICROS(n) I_EVERY_N_MICROS(CONCAT(_timer_, __COUNTER__), n)
+#define I_EVERY_N_MICROS(name, n)             \
+    static TimerMicros name = TimerMicros(n); \
+    if (name.ready())
 
 // Join two symbols together
-#define CONCAT(x, y) CONCAT_HELPER(x, y)
-#define CONCAT_HELPER(x, y) x##y
+#define CONCAT(x, y) I_CONCAT(x, y)
+#define I_CONCAT(x, y) x##y
+#endif
 
+/**--------------------------------------------------------------------------------------
+ * Benchmark Macros
+ *-------------------------------------------------------------------------------------*/
+
+// Toggle debug benchmarking
+#ifndef DEBUG_BENCHMARK
+#define DEBUG_BENCHMARK 1
+#endif
+
+// Benchmarking macros
+#if DEBUG_BENCHMARK
+// Creates a static benchmark timer
+// Use BENCHMARK_END or BENCHMARK_PRINT_END to get elapsed time
+#define BENCHMARK_BEGIN()               \
+    static Timer _benchmark_ = Timer(); \
+    _benchmark_.reset();
+// Creates elapsed time variable
+#define BENCHMARK_END() uint32_t _elapsed_ = _benchmark_.getElapsed();
+// Prints elapsed time
+#define BENCHMARK_PRINT_END(message)               \
+    uint32_t _elapsed_ = _benchmark_.getElapsed(); \
+    Serial.println(String(message) + _elapsed_);
+#else
+#define BENCHMARK_BEGIN()
+#define BENCHMARK_END()
+#define BENCHMARK_PRINT_END(message)
 #endif

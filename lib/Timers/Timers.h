@@ -172,15 +172,15 @@ public:
 // {
 // do something every 1000
 // }
-#define EVERY_N_MILLIS(N) EVERY_N_MILLIS_I(CONCAT(__timer, __COUNTER__), N)
-#define EVERY_N_MILLIS_I(NAME, N)             \
+#define EVERY_N_MILLIS(N) I_EVERY_N_MILLIS(CONCAT(__timer, __COUNTER__), N)
+#define I_EVERY_N_MILLIS(NAME, N)             \
     static TimerMillis NAME = TimerMillis(N); \
     if (NAME)
 
 // FUNC_EVERY_N_MILLIS(1000, function);
 // call function every 1000
-#define EVERY_N_MILLIS_FUNC(N, FUNC) EVERY_N_MILLIS_FUNC_I(CONCAT(__func_timer, __COUNTER__), N, FUNC)
-#define EVERY_N_MILLIS_FUNC_I(NAME, N, FUNC)                        \
+#define EVERY_N_MILLIS_FUNC(N, FUNC) I_EVERY_N_MILLIS_FUNC(CONCAT(__func_timer, __COUNTER__), N, FUNC)
+#define I_EVERY_N_MILLIS_FUNC(NAME, N, FUNC)                        \
     static TimerCallbackMillis NAME = TimerCallbackMillis(N, FUNC); \
     NAME.ready();
 
@@ -188,20 +188,20 @@ public:
 // {
 // do something every 1000
 // }
-#define EVERY_N_MICROS(N) EVERY_N_MICROS_I(CONCAT(__timer, __COUNTER__), N)
-#define EVERY_N_MICROS_I(NAME, N)             \
+#define EVERY_N_MICROS(N) I_EVERY_N_MICROS(CONCAT(__timer, __COUNTER__), N)
+#define I_EVERY_N_MICROS(NAME, N)             \
     static TimerMicros NAME = TimerMicros(N); \
     if (NAME)
 
 // FUNC_EVERY_N_MICROS(1000, function);
 // call function every 1000
-#define EVERY_N_MICROS_FUNC(N, FUNC) EVERY_N_MICROS_FUNC_I(CONCAT(__func_timer, __COUNTER__), N, FUNC)
-#define EVERY_N_MICROS_FUNC_I(NAME, N, FUNC)                        \
+#define EVERY_N_MICROS_FUNC(N, FUNC) I_EVERY_N_MICROS_FUNC(CONCAT(__func_timer, __COUNTER__), N, FUNC)
+#define I_EVERY_N_MICROS_FUNC(NAME, N, FUNC)                        \
     static TimerCallbackMicros NAME = TimerCallbackMicros(N, FUNC); \
     NAME.ready();
 
 // Join two symbols together
-#define CONCAT(x, y) CONCAT_HELPER(x, y)
-#define CONCAT_HELPER(x, y) x##y
+#define CONCAT(x, y) I_CONCAT(x, y)
+#define I_CONCAT(x, y) x##y
 
 #endif
