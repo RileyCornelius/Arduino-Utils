@@ -5,7 +5,8 @@
 #include <DigitalOutput.h>
 #include <Types.h>
 #include <LinkedList.h>
-#define LOG_LEVEL I_LOG_LEVEL_INFO
+#define LOG_LEVEL LOG_LEVEL_WARN
+#define LOG_LEVEL_MIN LOG_LEVEL_INFO
 #include <Logger.h>
 
 uint16 x = 0;
@@ -72,8 +73,8 @@ void CircularLinkedListTest()
 void loggerTest()
 {
   LOG_DEBUG("1");
-  LOG_INFO("2");
-  LOG_WARN("3");
+  LOG_INFO("2 %d", 222);
+  LOG_WARN(String("3 ") + "333");
   LOG_ERROR("4");
 }
 
