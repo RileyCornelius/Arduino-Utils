@@ -101,9 +101,7 @@ public:
 // Creates elapsed time variable
 #define BENCHMARK_END() uint32_t _elapsed_ = _benchmark_.getElapsed();
 // Prints elapsed time
-#define BENCHMARK_PRINT_END(message)               \
-    uint32_t _elapsed_ = _benchmark_.getElapsed(); \
-    Serial.println(String(message) + _elapsed_);
+#define BENCHMARK_PRINT_END(message) Serial.println(_benchmark_.getElapsed());
 #else
 #define BENCHMARK_BEGIN()
 #define BENCHMARK_END()

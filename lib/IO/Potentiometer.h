@@ -40,7 +40,7 @@ public:
         pinMode(pin, INPUT);
     }
 
-    bool changed()
+    bool hasChanged()
     {
         uint16_t value = read();
         if (value >= lastValue + threshold || value <= lastValue - threshold)
