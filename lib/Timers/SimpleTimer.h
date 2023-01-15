@@ -54,9 +54,13 @@ public:
     uint32_t getTime() override { return micros(); };
 };
 
-/*------------------------------------------------------------------------------
+/**--------------------------------------------------------------------------------------
  * Timer Macros
- *----------------------------------------------------------------------------*/
+ *-------------------------------------------------------------------------------------*/
+
+#define MILLIS_TO_SECONDS(n) (n / 1000)
+#define MILLIS_TO_MINUTES(n) (n / 60000)
+#define MILLIS_TO_HOURS(n) (n / 3600000)
 
 #ifndef EVERY_N_MILLIS
 // EVERY_N_MILLIS(1000)
@@ -80,30 +84,4 @@ public:
 // Join two symbols together
 #define CONCAT(x, y) I_CONCAT(x, y)
 #define I_CONCAT(x, y) x##y
-#endif
-
-/**--------------------------------------------------------------------------------------
- * Benchmark Macros
- *-------------------------------------------------------------------------------------*/
-
-// Toggle debug benchmarking
-#ifndef DEBUG_BENCHMARK
-#define DEBUG_BENCHMARK 1
-#endif
-
-// Benchmarking macros
-#if DEBUG_BENCHMARK
-// Creates a static benchmark timer
-// Use BENCHMARK_END or BENCHMARK_PRINT_END to get elapsed time
-#define BENCHMARK_BEGIN()               \
-    static Timer _benchmark_ = Timer(); \
-    _benchmark_.reset();
-// Creates elapsed time variable
-#define BENCHMARK_END() uint32_t _elapsed_ = _benchmark_.getElapsed();
-// Prints elapsed time
-#define BENCHMARK_PRINT_END(message) Serial.println(_benchmark_.getElapsed());
-#else
-#define BENCHMARK_BEGIN()
-#define BENCHMARK_END()
-#define BENCHMARK_PRINT_END(message)
 #endif

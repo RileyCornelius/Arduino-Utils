@@ -5,6 +5,7 @@
 #include <DigitalOutput.h>
 #include <Types.h>
 #include <LinkedList.h>
+#include <Benchmark.h>
 #define LOG_LEVEL LOG_LEVEL_WARN
 #define LOG_LEVEL_MIN LOG_LEVEL_INFO
 #include <Logger.h>
