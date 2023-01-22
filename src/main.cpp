@@ -9,6 +9,7 @@
 #define LOG_LEVEL LOG_LEVEL_WARN
 #define LOG_LEVEL_MIN LOG_LEVEL_INFO
 #include <Logger.h>
+#include <CSV.h>
 
 uint16 x = 0;
 uint32 count = 0;
@@ -74,9 +75,70 @@ void CircularLinkedListTest()
 void loggerTest()
 {
   LOG_DEBUG("1");
-  LOG_INFO("2 %d", 222);
+  LOG_INFO("2 %d %d", 222, 333);
   LOG_WARN(String("3 ") + "333");
   LOG_ERROR("4");
+}
+
+void benchmarkTest()
+{
+  BENCHMARK_BEGIN();
+  for (size_t i = 0; i < 1000000; i++)
+  {
+    count++;
+  }
+  BENCHMARK_END();
+}
+
+void csvTest()
+{
+  Serial.println();
+  Serial.println("-------- Create CSV --------");
+  String csv;
+  CSV Csv = CSV(&csv);
+  Csv.addRow("Hellos", "int", "float"); // Header
+  Csv.addRow("Hello1", 1, 1.11);
+  Csv.add("Hello2");
+  Csv.add(2);
+  Csv.add(2.22);
+  Csv.addNewLineChar();
+  Csv.addRow("Hello3", 3, 3.33);
+  Csv.addRow("Hello4", 4, 4.44);
+  Serial.print(csv);
+
+  Serial.println();
+  Serial.println("-------- Parse Rows CSV --------");
+  uint16_t rowNums = Csv.getRowCount();
+  Serial.println(String("row count: ") + rowNums);
+  String row[rowNums];
+  uint8_t rowIndex = 1;
+  Serial.println(String("data at index: ") + rowIndex);
+  Csv.getRowData(row, rowIndex);
+  for (size_t i = 0; i < rowNums; i++)
+  {
+    Serial.println(row[i]);
+  }
+
+  Serial.println();
+  Serial.println("-------- Parse Columns CSV --------");
+  uint16_t columnNums = Csv.getColumnCount();
+  Serial.println(String("column count: ") + columnNums);
+  String column[columnNums];
+  uint8_t columnIndex = 1;
+  Serial.println(String("data at column: ") + columnIndex);
+  Csv.getColumnData(column, columnIndex);
+  for (size_t i = 0; i < columnNums; ++i)
+  {
+    Serial.println(column[i]);
+  }
+
+  Serial.println();
+  Serial.println("-------- Parse at Column/Row CSV --------");
+  String dataAt;
+  columnIndex = 0;
+  rowIndex = 2;
+  Csv.getDataAtColumnRow(dataAt, columnIndex, rowIndex);
+  Serial.printf("data: %s at column: %d, row: %d", dataAt.c_str(), columnIndex, rowIndex);
 }
 
 void setup()
@@ -86,8 +148,9 @@ void setup()
 
 void loop()
 {
-  delay(1000);
+  delay(2000);
+  csvTest();
   // CircularLinkedListTest();
   // timerLedTest();
-  loggerTest();
+  // loggerTest();
 }
