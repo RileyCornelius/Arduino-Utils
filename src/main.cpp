@@ -5,6 +5,7 @@
 #include <DigitalOutput.h>
 #include <Types.h>
 #include <LinkedList.h>
+#define DEBUG_BENCHMARK 1
 #include <Benchmark.h>
 #define LOG_LEVEL LOG_LEVEL_WARN
 #define LOG_LEVEL_MIN LOG_LEVEL_INFO
@@ -83,11 +84,18 @@ void loggerTest()
 void benchmarkTest()
 {
   BENCHMARK_BEGIN();
-  for (size_t i = 0; i < 1000000; i++)
+  for (size_t i = 0; i < 100; i++)
   {
-    count++;
+    analogRead(0);
   }
-  BENCHMARK_END();
+  BENCHMARK_END("100 analogReads: ");
+
+  BENCHMARK_MICROS_BEGIN();
+  for (size_t i = 0; i < 100; i++)
+  {
+    analogRead(0);
+  }
+  BENCHMARK_MICROS_END("100 analogReads: ");
 }
 
 void csvTest()
@@ -149,7 +157,8 @@ void setup()
 void loop()
 {
   delay(2000);
-  csvTest();
+  benchmarkTest();
+  // csvTest();
   // CircularLinkedListTest();
   // timerLedTest();
   // loggerTest();
