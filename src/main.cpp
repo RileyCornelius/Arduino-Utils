@@ -7,10 +7,10 @@
 #include <LinkedList.h>
 #define DEBUG_BENCHMARK 1
 #include <Benchmark.h>
-#define LOG_LEVEL LOG_LEVEL_WARN
-#define LOG_LEVEL_MIN LOG_LEVEL_INFO
 #include <Logger.h>
 #include <CSV.h>
+
+static const char *LOG_TAG = "Main -";
 
 uint16 x = 0;
 uint32 count = 0;
@@ -75,10 +75,11 @@ void CircularLinkedListTest()
 
 void loggerTest()
 {
-  LOG_DEBUG("1");
-  LOG_INFO("2 %d %d", 222, 333);
-  LOG_WARN(String("3 ") + "333");
-  LOG_ERROR("4");
+  ESP_LOGD(LOG_TAG, 1);
+  LOG_DEBUG(LOG_TAG, "1");
+  LOG_INFO(LOG_TAG, "2 %d %d", 222, 333);
+  LOG_WARN(LOG_TAG, String("3 ") + "333");
+  LOG_ERROR(LOG_TAG, "4");
 }
 
 void benchmarkTest()
@@ -157,9 +158,9 @@ void setup()
 void loop()
 {
   delay(2000);
-  benchmarkTest();
+  // benchmarkTest();
   // csvTest();
   // CircularLinkedListTest();
   // timerLedTest();
-  // loggerTest();
+  loggerTest();
 }
