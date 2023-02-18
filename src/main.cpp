@@ -5,10 +5,10 @@
 #include <DigitalOutput.h>
 #include <Types.h>
 #include <LinkedList.h>
-#define DEBUG_BENCHMARK 1
 #include <Benchmark.h>
 #include <Logger.h>
 #include <CSV.h>
+#include <CurrentDataTime.h>
 
 static const char *LOG_TAG = "Main -";
 
@@ -75,7 +75,6 @@ void CircularLinkedListTest()
 
 void loggerTest()
 {
-  ESP_LOGD(LOG_TAG, 1);
   LOG_DEBUG(LOG_TAG, "1");
   LOG_INFO(LOG_TAG, "2 %d %d", 222, 333);
   LOG_WARN(LOG_TAG, String("3 ") + "333");
@@ -150,6 +149,13 @@ void csvTest()
   Serial.printf("data: %s at column: %d, row: %d", dataAt.c_str(), columnIndex, rowIndex);
 }
 
+void timeTest()
+{
+  CurrentDateTime dataTime;
+  Serial.println(dataTime.toString());
+  delay(1000);
+}
+
 void setup()
 {
   Serial.begin(9600);
@@ -162,5 +168,6 @@ void loop()
   // csvTest();
   // CircularLinkedListTest();
   // timerLedTest();
-  loggerTest();
+  // loggerTest();
+  timeTest();
 }
