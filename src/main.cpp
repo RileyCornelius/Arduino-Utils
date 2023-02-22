@@ -9,8 +9,11 @@
 #include <Logger.h>
 #include <CSV.h>
 #include <CurrentDataTime.h>
+#include <NTPTime.h>
 
 static const char *LOG_TAG = "Main -";
+
+NTPTime ntpTime;
 
 uint16 x = 0;
 uint32 count = 0;
@@ -156,9 +159,15 @@ void timeTest()
   delay(1000);
 }
 
+void timeTest2()
+{
+  ntpTime.updateTime();
+  Serial.println(ntpTime.getFormatDateTime());
+}
+
 void setup()
 {
-  Serial.begin(9600);
+  Serial.begin(115200);
 }
 
 void loop()
@@ -169,5 +178,6 @@ void loop()
   // CircularLinkedListTest();
   // timerLedTest();
   // loggerTest();
-  timeTest();
+  // timeTest();
+  // timeTest2();
 }
