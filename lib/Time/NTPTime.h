@@ -10,34 +10,36 @@
  *-------------------------------------------------------------------------------------*/
 
 //   WiFi.begin("SSID", "PASSWORD");
-//   NTPTime time;
-//   time.setTimeNTPAfterWiFi(10000);
+//   CTime time;
+//   time.setTimeFromNTP(WINNIPEG_TIMEZONE);
 //   time.updateTime();
 //   Serial.println(time.getFormatDateTime());
 
 /**--------------------------------------------------------------------------------------
- * Time library for ESP32 using Network Time Protocol (NTP)
+ * ESP32 Time library using C standard time library and Network Time Protocol (NTP)
  *-------------------------------------------------------------------------------------*/
 
-const char *NTP_SERVER = "pool.ntp.org";                   // NTP server
-const char *WINNIPEG_TIME_ZONE = "CST6CDT,M3.2.0,M11.1.0"; // America/Winnipeg timezone
+const char *WINNIPEG_TIMEZONE = "CST6CDT,M3.2.0,M11.1.0"; // America/Winnipeg timezone
+const char *UTC_TIMEZONE = "UTC0";                        // Universal Time Coordinated timezone
 
-class NTPTime
+class CTime
 {
 private:
-    const char weekDayName[7][4] = {
-        "Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"};
-    const char monthDayName[12][4] = {
-        "Jan", "Feb", "Mar", "Apr", "May", "Jun",
-        "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"};
-
+    const char *ntpServer = "pool.ntp.org"; // NTP server
     char dataTime[20];
     char date[11];
     char time[9];
 
 public:
     struct tm timeinfo;
-    NTPTime(){};
+
+    CTime(){};
+    CTime(tm time) : timeinfo(time){};
+    CTime(tm time, const char *tz)
+    {
+        setTimeZone(tz);
+        timeinfo = time; // called after setTimeZone else time will shift
+    };
 
     /**
      * Update time using standard library functions
@@ -51,39 +53,38 @@ public:
     }
 
     /**
-     * Config time using NTP and a timezone
+     * Config time using the Network Time Protocol server and adds a timezone
      *
-     * @param tz Timezone can be found here: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+     * @param tz Timezone strings can be found here: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
      */
-    void setTimeNTP(const char *tz = WINNIPEG_TIME_ZONE)
+    void setTimeFromNTP(const char *tz = UTC_TIMEZONE)
     {
-        configTzTime(tz, NTP_SERVER); // esp32 function to set time using NTP and a timezone
+        configTzTime(tz, ntpServer); // esp32 function to set time using NTP and a timezone
     }
 
     /**
-     * Blocks until connected to WiFi then config time using NTP and a timezone
+     * Config timezone
      *
-     * @param timeOutMillis Time out in milliseconds
-     * @return True if connected to WiFi
+     * @param tz Timezone strings can be found here: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
      */
-    bool setTimeNTPAfterWiFi(int32_t timeOutMillis, const char *timeZone = WINNIPEG_TIME_ZONE)
+    void setTimeZone(const char *tz)
     {
-        Serial.print("Waiting for WiFi.");
-        while (WiFi.status() != WL_CONNECTED && timeOutMillis > 0)
-        {
-            delay(300);
-            Serial.print(".");
-            timeOutMillis -= 300;
-        }
-        if (timeOutMillis <= 0)
-        {
-            Serial.println("Wifi connection timed out");
-            return false;
-        }
+        setenv("TZ", tz, 1);
+        tzset();
+    }
 
-        Serial.println("");
-        configTzTime(timeZone, NTP_SERVER);
-        return true;
+    /**
+     * Get string formatted time - https://cplusplus.com/reference/ctime/strftime/
+     *
+     * @param buff buffer to store the time string
+     * @param size size of the buffer
+     * @param format format of the time string
+     * @return Formatted time string
+     */
+    const char *getFormatStrfTime(char *buff, size_t size, const char *format)
+    {
+        strftime(buff, size, format, &timeinfo);
+        return buff;
     }
 
     const char *getFormatDate()
@@ -113,16 +114,6 @@ public:
                 getFormatTime());
 
         return dataTime;
-    }
-
-    const char *getWeekDayName()
-    {
-        return weekDayName[timeinfo.tm_wday];
-    }
-
-    const char *getMonthName()
-    {
-        return monthDayName[timeinfo.tm_mon];
     }
 
     int getYear()

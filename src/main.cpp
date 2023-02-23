@@ -13,7 +13,7 @@
 
 static const char *LOG_TAG = "Main -";
 
-NTPTime ntpTime;
+CTime ntpTime;
 
 uint16 x = 0;
 uint32 count = 0;
@@ -169,6 +169,7 @@ void setup()
 {
   Serial.begin(115200);
 }
+Timer timer(15000);
 
 void loop()
 {
@@ -179,5 +180,5 @@ void loop()
   // timerLedTest();
   // loggerTest();
   // timeTest();
-  // timeTest2();
+  timeTest2();
 }
