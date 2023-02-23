@@ -19,13 +19,17 @@
  * ESP32 Time library using C standard time library and Network Time Protocol (NTP)
  *-------------------------------------------------------------------------------------*/
 
-const char *WINNIPEG_TIMEZONE = "CST6CDT,M3.2.0,M11.1.0"; // America/Winnipeg timezone
-const char *UTC_TIMEZONE = "UTC0";                        // Universal Time Coordinated timezone
+#define WINNIPEG_TIMEZONE "CST6CDT,M3.2.0,M11.1.0" // America/Winnipeg timezone
+#define UTC_TIMEZONE "UTC0"                        // Universal Time Coordinated timezone
 
 class CTime
 {
 private:
-    const char *ntpServer = "pool.ntp.org"; // NTP server
+    const char *ntpServer0 = "0.ca.pool.ntp.org"; // Canada NTP server 0
+    const char *ntpServer1 = "1.ca.pool.ntp.org"; // Canada NTP server 1
+    const char *ntpServer2 = "2.ca.pool.ntp.org"; // Canada NTP server 2
+
+    // Buffer to store the formatted date and time
     char dataTime[20];
     char date[11];
     char time[9];
@@ -59,7 +63,7 @@ public:
      */
     void setTimeFromNTP(const char *tz = UTC_TIMEZONE)
     {
-        configTzTime(tz, ntpServer); // esp32 function to set time using NTP and a timezone
+        configTzTime(tz, ntpServer0, ntpServer1, ntpServer2); // esp32 function to set time using NTP and a timezone
     }
 
     /**

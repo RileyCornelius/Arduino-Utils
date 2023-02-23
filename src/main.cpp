@@ -9,7 +9,7 @@
 #include <Logger.h>
 #include <CSV.h>
 #include <CurrentDataTime.h>
-#include <NTPTime.h>
+#include <CTime.h>
 
 static const char *LOG_TAG = "Main -";
 
@@ -169,7 +169,6 @@ void setup()
 {
   Serial.begin(115200);
 }
-Timer timer(15000);
 
 void loop()
 {
