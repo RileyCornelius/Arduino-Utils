@@ -38,11 +38,25 @@ public:
     struct tm timeinfo;
 
     CTime(){};
-    CTime(tm time) : timeinfo(time){};
+    CTime(tm time)
+    {
+        setTime(time);
+    };
     CTime(tm time, const char *tz)
     {
         setTimeZone(tz);
-        timeinfo = time; // called after setTimeZone else time will shift
+        setTime(time); // called after setTimeZone else time will shift
+    };
+    CTime(int seconds, int minutes, int hours, int day, int month, int year)
+    {
+        struct tm time = {0}; // Initialize the timeinfo struct with all zeros
+        time.tm_sec = seconds;
+        time.tm_min = minutes;
+        time.tm_hour = hours;
+        time.tm_mday = day;
+        time.tm_mon = month - 1;    // tm_mon is value 0-11
+        time.tm_year = year - 1900; // tm_year is the number of years since 1900
+        setTime(time);
     };
 
     /**
@@ -67,7 +81,7 @@ public:
     }
 
     /**
-     * Config timezone
+     * Config timezone using standard library functions should be called before setTime
      *
      * @param tz Timezone strings can be found here: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
      */
@@ -75,6 +89,34 @@ public:
     {
         setenv("TZ", tz, 1);
         tzset();
+    }
+
+    /**
+     * Config time and date using standard library functions
+     *
+     * @param time time struct
+     */
+    void setTime(tm &time)
+    {
+        timeinfo = time;
+        time_t t = mktime(&timeinfo);
+        struct timeval now = {.tv_sec = t};
+        settimeofday(&now, NULL);
+    }
+
+    /**
+     * Config time and date using standard library functions
+     */
+    void setTime(int seconds, int minutes, int hours, int day, int month, int year)
+    {
+        struct tm time = {0}; // Initialize the timeinfo struct with all zeros
+        time.tm_sec = seconds;
+        time.tm_min = minutes;
+        time.tm_hour = hours;
+        time.tm_mday = day;
+        time.tm_mon = month - 1;    // tm_mon is value 0-11
+        time.tm_year = year - 1900; // tm_year is the number of years since 1900
+        setTime(time);
     }
 
     /**
@@ -104,9 +146,9 @@ public:
     const char *getFormatTime()
     {
         sprintf(time, "%02d:%02d:%02d",
-                getHour(),
-                getMinute(),
-                getSecond());
+                getHours(),
+                getMinutes(),
+                getSeconds());
 
         return time;
     }
@@ -135,17 +177,17 @@ public:
         return timeinfo.tm_mday;
     }
 
-    int getHour()
+    int getHours()
     {
         return timeinfo.tm_hour;
     }
 
-    int getMinute()
+    int getMinutes()
     {
         return timeinfo.tm_min;
     }
 
-    int getSecond()
+    int getSeconds()
     {
         return timeinfo.tm_sec;
     }
