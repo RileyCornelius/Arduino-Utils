@@ -2,17 +2,17 @@
 
 #include <Arduino.h>
 
-class CurrentDateTime
+class PcDateTime
 {
 public:
-    uint8_t year;   ///< Year 0-99
-    uint8_t month;  ///< Month 1-12
-    uint8_t day;    ///< Day 1-31
-    uint8_t hour;   ///< Hours 0-23
-    uint8_t minute; ///< Minutes 0-59
-    uint8_t second; ///< Seconds 0-59
+    uint8_t year;    ///< Year 0-99
+    uint8_t month;   ///< Month 1-12
+    uint8_t day;     ///< Day 1-31
+    uint8_t hours;   ///< Hours 0-23
+    uint8_t minutes; ///< Minutes 0-59
+    uint8_t seconds; ///< Seconds 0-59
 
-    CurrentDateTime()
+    PcDateTime()
     {
         const __FlashStringHelper *date = F(__DATE__);
         const __FlashStringHelper *time = F(__TIME__);
@@ -50,15 +50,15 @@ public:
         }
         day = conv2d(buff + 4);
         memcpy(buff, time, 8);
-        hour = conv2d(buff);
-        minute = conv2d(buff + 3);
-        second = conv2d(buff + 6);
+        hours = conv2d(buff);
+        minutes = conv2d(buff + 3);
+        seconds = conv2d(buff + 6);
     }
 
     String toString()
     {
         char buff[20];
-        sprintf(buff, "%02d/%02d/%02d %02d:%02d:%02d", year, month, day, hour, minute, second);
+        sprintf(buff, "%02d/%02d/%02d %02d:%02d:%02d", year, month, day, hours, minutes, seconds);
         return String(buff);
     }
 
