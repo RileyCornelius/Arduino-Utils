@@ -34,9 +34,9 @@ private:
     char date[11];
     char time[9];
 
-public:
-    struct tm timeinfo;
+    struct tm timeinfo = {0};
 
+public:
     CTime(){};
     CTime(tm time)
     {
@@ -68,6 +68,42 @@ public:
         {
             Serial.println("Set time is invalid");
         }
+    }
+
+    /**
+     * Set time using the computers time at compilation
+     */
+    void setTimeFromComputer()
+    {
+        String timeDate = String(__TIME__) + " " + String(__DATE__);
+        strptime(timeDate.c_str(), "%H:%M:%S %b %d %Y", &timeinfo);
+        setTime(timeinfo);
+    }
+
+    /**
+     * Set time using time struct
+     *
+     * @param time Time struct
+     */
+    void setTime(tm &time)
+    {
+        timeinfo = time;
+        timeval tv = {
+            .tv_sec = mktime(&time),
+            .tv_usec = 0,
+        };
+        settimeofday(&tv, NULL);
+    }
+
+    void setTime(int year, int month, int day, int hour, int min, int sec)
+    {
+        timeinfo.tm_year = year - 1900;
+        timeinfo.tm_mon = month - 1;
+        timeinfo.tm_mday = day;
+        timeinfo.tm_hour = hour;
+        timeinfo.tm_min = min;
+        timeinfo.tm_sec = sec;
+        setTime(timeinfo);
     }
 
     /**
@@ -127,13 +163,13 @@ public:
      * @param format format of the time string
      * @return Formatted time string
      */
-    const char *getFormatStrfTime(char *buff, size_t size, const char *format)
+    const char *getStrfTime(char *buff, size_t size, const char *format)
     {
         strftime(buff, size, format, &timeinfo);
         return buff;
     }
 
-    const char *getFormatDate()
+    const char *getDate()
     {
         sprintf(date, "%04d-%02d-%02d",
                 getYear(),
@@ -143,7 +179,7 @@ public:
         return date;
     }
 
-    const char *getFormatTime()
+    const char *getTime()
     {
         sprintf(time, "%02d:%02d:%02d",
                 getHours(),
@@ -153,7 +189,7 @@ public:
         return time;
     }
 
-    const char *getFormatDateTime()
+    const char *getDateTime()
     {
         sprintf(dataTime, "%s %s",
                 getFormatDate(),
