@@ -8,12 +8,12 @@
 #include <Benchmark.h>
 #include <Logger.h>
 #include <CSV.h>
-#include <CurrentDataTime.h>
 #include <CTime.h>
+#include <StateMachine.h>
 
-static const char *LOG_TAG = "Main -";
+static const char *LOG_TAG = "[Main]";
 
-CTime ntpTime;
+// CTime ntpTime;
 
 uint16 x = 0;
 uint32 count = 0;
@@ -152,32 +152,66 @@ void csvTest()
   Serial.printf("data: %s at column: %d, row: %d", dataAt.c_str(), columnIndex, rowIndex);
 }
 
-void timeTest()
-{
-  CurrentDateTime dataTime;
-  Serial.println(dataTime.toString());
-  delay(1000);
-}
+State LedOn(
+    "LedOn",
+    []()
+    { Serial.println("LedOn"); },
+    NULL,
+    NULL);
 
-void timeTest2()
+State LedOff(
+    "LedOff",
+    []()
+    { Serial.println("LedOff"); },
+    NULL,
+    NULL);
+
+State LedBlinking(
+    "LedBlinking",
+    NULL,
+    []()
+    {
+  static unsigned long lastTime = 0;
+  static bool ledState = false;
+  if (millis() - lastTime > 1000)
+  {
+    Serial.println("Led:" + String(ledState ? "On" : "Off"));
+    lastTime = millis();
+    ledState = !ledState;
+  } },
+    NULL);
+
+StateMachine ledState(LedOff);
+
+void stateMachineTest()
 {
-  ntpTime.updateTime();
-  Serial.println(ntpTime.getFormatDateTime());
+  static int x = 0;
+  if (x == 0)
+    ledState.set(LedOn);
+  if (x == 1)
+    ledState.set(LedOff);
+  if (x == 2)
+    ledState.set(LedBlinking);
+
+  x++;
+  ledState.handle();
 }
 
 void setup()
 {
   Serial.begin(115200);
+  // ledState.set(LedOn);
 }
 
 void loop()
 {
   delay(2000);
+  stateMachineTest();
   // benchmarkTest();
   // csvTest();
   // CircularLinkedListTest();
   // timerLedTest();
   // loggerTest();
   // timeTest();
-  timeTest2();
+  // timeTest2();
 }
