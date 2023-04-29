@@ -19,7 +19,7 @@ static void iprintf(const char *loglevel, const char *tag, const char *format, v
     vsprintf(message, format, args);
 #if LOG_PRINT_TIME
 
-    Serial.printf("[%s] (%d) %s %s\n", loglevel, LOG_TIME_GETTER(), tag, message);
+    Serial.printf("[%s] (%s) %s %s\n", loglevel, LOG_TIME_GETTER, tag, message);
 #else
     Serial.printf("[%s] %s %s\n", loglevel, tag, message);
 #endif
