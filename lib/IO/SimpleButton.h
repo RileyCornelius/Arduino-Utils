@@ -3,7 +3,7 @@
 #include <Arduino.h>
 
 #if defined(ARDUINO_ARCH_STM32)
-class Button
+class Button2
 {
 private:
     bool prevState;
@@ -15,17 +15,17 @@ private:
 public:
     uint32_t holdTime; // Milliseconds
 
-    Button()
+    Button2()
     {
         holdTime = 50;
     }
 
-    Button(uint8_t pinNumber) : Button()
+    Button2(uint8_t pinNumber) : Button2()
     {
         setPin(pinNumber);
     }
 
-    Button(uint8_t pinNumber, bool isActiveHigh) : Button()
+    Button2(uint8_t pinNumber, bool isActiveHigh) : Button2()
     {
         setPin(pinNumber, isActiveHigh);
     }
@@ -67,7 +67,7 @@ public:
     operator bool() { return debounce(); }
 };
 #else
-class Button
+class Button2
 {
 private:
     bool prevState;
@@ -78,12 +78,12 @@ private:
 public:
     uint32_t holdTime; // Milliseconds
 
-    Button()
+    Button2()
     {
         holdTime = 50;
     }
 
-    Button(uint8_t pinNumber) : Button()
+    Button2(uint8_t pinNumber) : Button2()
     {
         setPin(pinNumber);
     }

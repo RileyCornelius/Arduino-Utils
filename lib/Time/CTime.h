@@ -80,31 +80,31 @@ public:
         setTime(timeinfo);
     }
 
-    /**
-     * Set time using time struct
-     *
-     * @param time Time struct
-     */
-    void setTime(tm &time)
-    {
-        timeinfo = time;
-        timeval tv = {
-            .tv_sec = mktime(&time),
-            .tv_usec = 0,
-        };
-        settimeofday(&tv, NULL);
-    }
+    // /**
+    //  * Set time using time struct
+    //  *
+    //  * @param time Time struct
+    //  */
+    // void setTime(tm &time)
+    // {
+    //     timeinfo = time;
+    //     timeval tv = {
+    //         .tv_sec = mktime(&time),
+    //         .tv_usec = 0,
+    //     };
+    //     settimeofday(&tv, NULL);
+    // }
 
-    void setTime(int year, int month, int day, int hour, int min, int sec)
-    {
-        timeinfo.tm_year = year - 1900;
-        timeinfo.tm_mon = month - 1;
-        timeinfo.tm_mday = day;
-        timeinfo.tm_hour = hour;
-        timeinfo.tm_min = min;
-        timeinfo.tm_sec = sec;
-        setTime(timeinfo);
-    }
+    // void setTime(int year, int month, int day, int hour, int min, int sec)
+    // {
+    //     timeinfo.tm_year = year - 1900;
+    //     timeinfo.tm_mon = month - 1;
+    //     timeinfo.tm_mday = day;
+    //     timeinfo.tm_hour = hour;
+    //     timeinfo.tm_min = min;
+    //     timeinfo.tm_sec = sec;
+    //     setTime(timeinfo);
+    // }
 
     /**
      * Config time using the Network Time Protocol server and adds a timezone
@@ -192,8 +192,8 @@ public:
     const char *getDateTime()
     {
         sprintf(dataTime, "%s %s",
-                getFormatDate(),
-                getFormatTime());
+                getDate(),
+                getTime());
 
         return dataTime;
     }

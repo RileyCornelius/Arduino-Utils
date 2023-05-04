@@ -1,6 +1,5 @@
 #include <Arduino.h>
 
-#include <Button.h>
 #include <SimpleTimer.h>
 #include <DigitalOutput.h>
 #include <Types.h>
@@ -10,6 +9,7 @@
 #include <CSV.h>
 #include <CTime.h>
 #include <StateMachine.h>
+#include <Button.h>
 
 static const char *LOG_TAG = "[Main]";
 
@@ -17,16 +17,6 @@ static const char *LOG_TAG = "[Main]";
 
 uint16 x = 0;
 uint32 count = 0;
-
-void buttonTest()
-{
-  static Button button = Button(2);
-  if (button)
-  {
-    x++;
-    Serial.println("Pressed " + x);
-  }
-}
 
 void timerLedTest()
 {
@@ -197,16 +187,66 @@ void stateMachineTest()
   ledState.handle();
 }
 
+// Button button(2, INPUT, 0);
+TheButton button;
+
+void buttonTest()
+{
+  button.check();
+
+  if (button.released())
+  {
+    Serial.println("Button released");
+  }
+
+  if (button.pressed())
+  {
+    Serial.println("Button pressed");
+  }
+
+  if (button.clicked())
+  {
+    Serial.println("Button clicked 1");
+  }
+
+  // if (button.doubleClicked())
+  // {
+  //   Serial.println("Button clicked 2");
+  // }
+
+  // if (button.tripleClicked())
+  // {
+  //   Serial.println("Button clicked 3");
+  // }
+
+  // if (button.longPressed())
+  // {
+  //   Serial.println("Button long pressed");
+  // }
+
+  // if (button.longPressReleased())
+  // {
+  //   Serial.println("Button long press released");
+  // }
+}
+
 void setup()
 {
   Serial.begin(115200);
   // ledState.set(LedOn);
+
+  button.setPinMode(D2, INPUT, LOW);
 }
 
 void loop()
 {
-  delay(2000);
-  stateMachineTest();
+  // if (digitalRead(D2))
+  // {
+  //   Serial.println("HIGH");
+  // }
+  buttonTest();
+  // delay(2000);
+  // stateMachineTest();
   // benchmarkTest();
   // csvTest();
   // CircularLinkedListTest();
