@@ -21,9 +21,9 @@ private:
 
 public:
     Button();
-    Button(uint8_t pinNumber, uint8_t inputMode = INPUT_PULLUP, uint8_t activeHigh = 0);
+    Button(uint8_t pinNumber, uint8_t inputMode = INPUT_PULLUP, uint8_t activeState = LOW);
 
-    void setPinMode(uint8_t pinNumber, uint8_t inputMode = INPUT_PULLUP, uint8_t activeHigh = 0);
+    void setPinMode(uint8_t pinNumber, uint8_t inputMode = INPUT_PULLUP, uint8_t activeState = LOW);
     void setDebounceDelay(uint16_t debounceDelayMs);
     void setClickDelay(uint16_t clickDelayMs);
     void setLongPressDelay(uint16_t longPressDelayMs);

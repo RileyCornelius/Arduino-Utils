@@ -10,6 +10,7 @@
 #include <CTime.h>
 #include <StateMachine.h>
 #include <Button.h>
+#include <CallbackButton.h>
 
 static const char *LOG_TAG = "[Main]";
 
@@ -229,15 +230,37 @@ void buttonTest()
   }
 }
 
+CallbackButton callbackButton(2, INPUT, 0);
+
+void buttonCallbacks()
+{
+  callbackButton.setClickedCallback([]()
+                                    { Serial.println("Button clicked"); });
+  callbackButton.setDoubleClickedCallback([]()
+                                          { Serial.println("Button double clicked"); });
+  callbackButton.setTripleClickedCallback([]()
+                                          { Serial.println("Button triple clicked"); });
+  callbackButton.setLongPressedCallback([]()
+                                        { Serial.println("Button long pressed"); });
+  callbackButton.setLongPressReleasedCallback([]()
+                                              { Serial.println("Button long press released"); });
+  callbackButton.setPressedCallback([]()
+                                    { Serial.println("Button pressed"); });
+  callbackButton.setReleasedCallback([]()
+                                     { Serial.println("Button released"); });
+}
+
 void setup()
 {
   Serial.begin(115200);
   // button.setPinMode(D2, INPUT, LOW);
+  buttonCallbacks();
 }
 
 void loop()
 {
-  buttonTest();
+  callbackButton.run();
+  // buttonTest();
 
   // delay(2000);
   // stateMachineTest();

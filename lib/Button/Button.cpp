@@ -8,9 +8,9 @@ Button::Button()
 {
 }
 
-Button::Button(uint8_t pinNumber, uint8_t inputMode /* = INPUT_PULLUP */, uint8_t isActiveHigh /* = 0 */)
+Button::Button(uint8_t pinNumber, uint8_t inputMode /* = INPUT_PULLUP */, uint8_t activeState /* = LOW */)
 {
-    setPinMode(pinNumber, inputMode, isActiveHigh);
+    setPinMode(pinNumber, inputMode, activeState);
 }
 
 /**--------------------------------------------------------------------------------------
@@ -18,15 +18,16 @@ Button::Button(uint8_t pinNumber, uint8_t inputMode /* = INPUT_PULLUP */, uint8_
  *-------------------------------------------------------------------------------------*/
 
 /**
- * \param pin The pin number of the button
+ * Default inputMode: INPUT_PULLUP - Default activeState: LOW
+ * \param pinNumber The pin number of the button
  * \param inputMode The type of input - INPUT, INPUT_PULLUP, INPUT_PULLDOWN
- * \param activeHigh The state that triggers the button - LOW or HIGH
+ * \param buttonActiveState The state that triggers the button - LOW or HIGH
  */
-void Button::setPinMode(uint8_t pinNumber, uint8_t inputMode /* = INPUT_PULLUP */, uint8_t activeHigh /* = 0 */)
+void Button::setPinMode(uint8_t pinNumber, uint8_t inputMode /* = INPUT_PULLUP */, uint8_t buttonActiveState /* = LOW */)
 {
     pinMode(pinNumber, inputMode);
     pin = pinNumber;
-    activeState = activeHigh;
+    activeState = buttonActiveState;
 }
 
 void Button::setDebounceDelay(uint16_t debounceDelayMs)
