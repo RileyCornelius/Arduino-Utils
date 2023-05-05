@@ -187,8 +187,7 @@ void stateMachineTest()
   ledState.handle();
 }
 
-// Button button(2, INPUT, 0);
-TheButton button;
+Button button(2, INPUT, 0);
 
 void buttonTest()
 {
@@ -209,42 +208,37 @@ void buttonTest()
     Serial.println("Button clicked 1");
   }
 
-  // if (button.doubleClicked())
-  // {
-  //   Serial.println("Button clicked 2");
-  // }
+  if (button.doubleClicked())
+  {
+    Serial.println("Button clicked 2");
+  }
 
-  // if (button.tripleClicked())
-  // {
-  //   Serial.println("Button clicked 3");
-  // }
+  if (button.tripleClicked())
+  {
+    Serial.println("Button clicked 3");
+  }
 
-  // if (button.longPressed())
-  // {
-  //   Serial.println("Button long pressed");
-  // }
+  if (button.longPressed())
+  {
+    Serial.println("Button long pressed");
+  }
 
-  // if (button.longPressReleased())
-  // {
-  //   Serial.println("Button long press released");
-  // }
+  if (button.longPressReleased())
+  {
+    Serial.println("Button long press released");
+  }
 }
 
 void setup()
 {
   Serial.begin(115200);
-  // ledState.set(LedOn);
-
-  button.setPinMode(D2, INPUT, LOW);
+  // button.setPinMode(D2, INPUT, LOW);
 }
 
 void loop()
 {
-  // if (digitalRead(D2))
-  // {
-  //   Serial.println("HIGH");
-  // }
   buttonTest();
+
   // delay(2000);
   // stateMachineTest();
   // benchmarkTest();

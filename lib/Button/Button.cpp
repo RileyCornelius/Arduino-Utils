@@ -1,75 +1,91 @@
 #include "Button.h"
 
-TheButton::TheButton()
+/**--------------------------------------------------------------------------------------
+ * Initialization
+ *-------------------------------------------------------------------------------------*/
+
+Button::Button()
 {
 }
 
-TheButton::TheButton(uint8_t pinNumber, uint8_t inputMode /* = INPUT_PULLUP */, uint8_t isActiveHigh /* = 0 */)
+Button::Button(uint8_t pinNumber, uint8_t inputMode /* = INPUT_PULLUP */, uint8_t isActiveHigh /* = 0 */)
 {
     setPinMode(pinNumber, inputMode, isActiveHigh);
 }
+
+/**--------------------------------------------------------------------------------------
+ * Initialization
+ *-------------------------------------------------------------------------------------*/
 
 /**
  * \param pin The pin number of the button
  * \param inputMode The type of input - INPUT, INPUT_PULLUP, INPUT_PULLDOWN
  * \param activeHigh The state that triggers the button - LOW or HIGH
  */
-void TheButton::setPinMode(uint8_t pinNumber, uint8_t inputMode /* = INPUT_PULLUP */, uint8_t activeHigh /* = 0 */)
+void Button::setPinMode(uint8_t pinNumber, uint8_t inputMode /* = INPUT_PULLUP */, uint8_t activeHigh /* = 0 */)
 {
     pinMode(pinNumber, inputMode);
     pin = pinNumber;
     activeState = activeHigh;
 }
 
-void TheButton::setDebounce(uint32_t debounceDelayMs)
+void Button::setDebounceDelay(uint16_t debounceDelayMs)
 {
     debounceDelay = debounceDelayMs;
 }
-void TheButton::setClick(uint32_t clickDelayMs)
+void Button::setClickDelay(uint16_t clickDelayMs)
 {
     clickDelay = clickDelayMs;
 }
-void TheButton::setLongPress(uint32_t longPressDelayMs)
+void Button::setLongPressDelay(uint16_t longPressDelayMs)
 {
     longPressDelay = longPressDelayMs;
 }
 
-bool TheButton::clicked()
+/**--------------------------------------------------------------------------------------
+ * Public Functions
+ *-------------------------------------------------------------------------------------*/
+
+bool Button::clicked()
 {
     return (state.is(CLICKED) && clickCount == 1);
 }
 
-bool TheButton::doubleClicked()
+bool Button::doubleClicked()
 {
     return (state.is(CLICKED) && clickCount == 2);
 }
 
-bool TheButton::tripleClicked()
+bool Button::tripleClicked()
 {
     return (state.is(CLICKED) && clickCount == 3);
 }
 
-bool TheButton::pressed()
+bool Button::pressed()
 {
-    return (state.is(PRESSED) && state.justChanged());
+    return (state.is(PRESSED) && state.justEntered());
 }
 
-bool TheButton::released()
+bool Button::released()
 {
     return (state.is(RELEASED));
 }
 
-bool TheButton::longPressed()
+bool Button::longPressed()
 {
-    return (state.is(LONG_PRESSED) && state.justChanged());
+    return (state.is(LONG_PRESSED) && state.justEntered());
 }
 
-bool TheButton::longPressReleased(bool runCheck /* = true */)
+bool Button::longPressReleased()
 {
-    return (state.is(RELEASED) && state.was(LONG_PRESSED) && state.justChanged());
+    return (state.is(RELEASED) && lastPressTime == 0);
 }
 
-void TheButton::check()
+/**
+ * Checks the button state and updates the state machine
+ * Must only be called once per loop else button states may be missed
+ */
+void Button::check()
 {
     bool pressedState = (digitalRead(pin) == activeState);
 
@@ -101,6 +117,15 @@ void TheButton::check()
     case (PRESSED):
         if (!pressedState)
         {
+            if (millis() - lastClickTime > clickDelay)
+            {
+                clickCount = 1;
+                lastClickTime = millis();
+            }
+            else
+            {
+                clickCount++;
+            }
             state.set(CLICKED);
         }
         else if (millis() - lastPressTime > longPressDelay)
@@ -110,15 +135,6 @@ void TheButton::check()
         break;
 
     case (CLICKED):
-        if (millis() - lastClickTime < clickDelay)
-        {
-            clickCount++;
-        }
-        else
-        {
-            clickCount = 1;
-            lastClickTime = millis();
-        }
         state.set(RELEASED);
         break;
 
@@ -129,6 +145,7 @@ void TheButton::check()
     case (LONG_PRESSED):
         if (!pressedState)
         {
+            lastPressTime = 0;
             state.set(RELEASED);
         }
         break;

@@ -3,14 +3,12 @@
 #include <Arduino.h>
 #include "ButtonState.h"
 
-class TheButton
+class Button
 {
 private:
     uint8_t pin;
     bool activeState;
     ButtonState state;
-
-    uint8_t lastPressedState = LOW;
 
     uint16_t lastDebounceTime = 0;
     uint16_t lastPressTime = 0;
@@ -18,23 +16,17 @@ private:
     uint16_t clickCount = 0;
 
     uint16_t debounceDelay = 20;
-    uint16_t clickDelay = 500;
-    uint16_t longPressDelay = 2000;
-
-    // bool debounce();
-    // bool checkPressed(uint16_t now, uint8_t state);
-    // bool checkDebounce(u_int32_t now, uint8_t state);
+    uint16_t clickDelay = 400;
+    uint16_t longPressDelay = 1000;
 
 public:
-    TheButton();
-    TheButton(uint8_t pinNumber, uint8_t inputMode = INPUT_PULLUP, uint8_t activeHigh = 0);
+    Button();
+    Button(uint8_t pinNumber, uint8_t inputMode = INPUT_PULLUP, uint8_t activeHigh = 0);
 
     void setPinMode(uint8_t pinNumber, uint8_t inputMode = INPUT_PULLUP, uint8_t activeHigh = 0);
-    void setDebounce(uint32_t debounceDelayMs);
-    void setClick(uint32_t clickDelayMs);
-    void setLongPress(uint32_t longPressDelayMs);
-
-    void check();
+    void setDebounceDelay(uint16_t debounceDelayMs);
+    void setClickDelay(uint16_t clickDelayMs);
+    void setLongPressDelay(uint16_t longPressDelayMs);
 
     bool clicked();
     bool doubleClicked();
@@ -42,5 +34,7 @@ public:
     bool pressed();
     bool released();
     bool longPressed();
-    bool longPressReleased(bool runCheck = true);
+    bool longPressReleased();
+
+    void check();
 };

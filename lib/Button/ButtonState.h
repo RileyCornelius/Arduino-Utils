@@ -8,8 +8,8 @@ enum ButtonStateEnum
 {
     IDLE,
     DEBOUNCING,
-    CLICKED,
     PRESSED,
+    CLICKED,
     RELEASED,
     LONG_PRESSED,
 };
@@ -22,18 +22,16 @@ private:
     const String buttonStateNames[6] = {
         "IDLE",
         "DEBOUNCING",
-        "CLICKED",
         "PRESSED",
+        "CLICKED",
         "RELEASED",
         "LONG_PRESSED",
     };
 #endif
     ButtonStateEnum currentState = IDLE;
-    ButtonStateEnum lastState = currentState;
-    bool firstRun = true;
+    bool enteredState = true;
 
 public:
-    bool was(ButtonStateEnum state) { return (lastState == state); }
     bool is(ButtonStateEnum state) { return (currentState == state); }
     ButtonStateEnum get() { return currentState; }
     void set(ButtonStateEnum newState)
@@ -43,16 +41,15 @@ public:
 #if BUTTON_STATE_PRINT
             Serial.println(buttonStateNames[currentState] + " => " + buttonStateNames[newState]);
 #endif
-            firstRun = true;
-            lastState = currentState;
+            enteredState = true;
             currentState = newState;
         }
     }
-    bool justChanged()
+    bool justEntered()
     {
-        if (firstRun)
+        if (enteredState)
         {
-            firstRun = false;
+            enteredState = false;
             return true;
         }
         return false;
