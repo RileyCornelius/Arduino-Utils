@@ -65,6 +65,11 @@ bool Button::longPressReleased()
     return (state.is(RELEASED) && lastPressTime == 0);
 }
 
+bool Button::held()
+{
+    return (state.is(PRESSED));
+}
+
 /**
  * Checks the button state and updates the state machine
  * Must only be called once per loop else button states may be missed

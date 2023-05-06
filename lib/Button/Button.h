@@ -37,6 +37,7 @@ public:
     bool released();
     bool longPressed();
     bool longPressReleased();
+    bool held();
 
     void check();
 };
