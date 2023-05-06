@@ -1,12 +1,16 @@
 #include "Button.h"
 
+/**--------------------------------------------------------------------------------------
+ * Initialization
+ *-------------------------------------------------------------------------------------*/
+
 Button::Button()
 {
 }
 
 Button::Button(uint8_t pinNumber, uint8_t inputMode /* = INPUT_PULLUP */, uint8_t activeState /* = LOW */)
 {
-    setPinMode(pinNumber, inputMode, activeState);
+    init(pinNumber, inputMode, activeState);
 }
 
 /**
@@ -15,12 +19,16 @@ Button::Button(uint8_t pinNumber, uint8_t inputMode /* = INPUT_PULLUP */, uint8_
  * \param inputMode The type of input - INPUT, INPUT_PULLUP, INPUT_PULLDOWN
  * \param buttonActiveState The state that triggers the button - LOW or HIGH
  */
-void Button::setPinMode(uint8_t pinNumber, uint8_t inputMode /* = INPUT_PULLUP */, uint8_t buttonActiveState /* = LOW */)
+void Button::init(uint8_t pinNumber, uint8_t inputMode /* = INPUT_PULLUP */, uint8_t buttonActiveState /* = LOW */)
 {
     pinMode(pinNumber, inputMode);
     pin = pinNumber;
     activeState = buttonActiveState;
 }
+
+/**--------------------------------------------------------------------------------------
+ * Public Functions
+ *-------------------------------------------------------------------------------------*/
 
 bool Button::clicked()
 {

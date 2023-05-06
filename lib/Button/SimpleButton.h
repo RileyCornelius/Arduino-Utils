@@ -19,12 +19,13 @@ public:
     {
     }
 
-    SimpleButton(uint8_t pinNumber, uint8_t inputMode = INPUT_PULLUP, uint8_t buttonActiveState = LOW)
+    SimpleButton(uint8_t pinNumber, uint8_t inputMode = INPUT_PULLUP, uint8_t activeState = LOW)
     {
-        init(pinNumber, inputMode, buttonActiveState);
+        init(pinNumber, inputMode, activeState);
     }
 
     /**
+     * Default inputMode: INPUT_PULLUP - Default activeState: LOW
      * \param pin The pin number of the button
      * \param inputMode The type of input - INPUT, INPUT_PULLUP, INPUT_PULLDOWN
      * \param buttonActiveState The state that triggers the button

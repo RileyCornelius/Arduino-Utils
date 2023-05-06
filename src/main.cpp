@@ -257,7 +257,7 @@ SimpleButton simpleButton(2, INPUT, 0);
 void setup()
 {
   Serial.begin(115200);
-  // button.setPinMode(D2, INPUT, LOW);
+  // button.init(D2, INPUT, LOW);
   buttonCallbacks();
 }
 
