@@ -250,6 +250,10 @@ void buttonCallbacks()
                                      { Serial.println("Button released"); });
 }
 
+#include <SimpleButton.h>
+
+SimpleButton simpleButton(2, INPUT, 0);
+
 void setup()
 {
   Serial.begin(115200);
@@ -259,7 +263,11 @@ void setup()
 
 void loop()
 {
-  callbackButton.run();
+  if (simpleButton.pressed())
+  {
+    Serial.println("Button pressed");
+  }
+  // callbackButton.run();
   // buttonTest();
 
   // delay(2000);
