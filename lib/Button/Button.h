@@ -6,9 +6,10 @@
 class Button
 {
 private:
-    uint8_t pin;
-    bool activeState;
     ButtonState state;
+
+    bool activeState;
+    uint8_t pin;
 
     uint16_t lastDebounceTime = 0;
     uint16_t lastPressTime = 0;

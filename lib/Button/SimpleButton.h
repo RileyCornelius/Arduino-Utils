@@ -11,10 +11,9 @@ private:
 
     uint8_t pin;
     uint32_t lastTime;
-
-public:
     uint32_t debounceDelay = 20; // Milliseconds
 
+public:
     SimpleButton()
     {
     }
