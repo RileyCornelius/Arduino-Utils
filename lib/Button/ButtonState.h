@@ -16,7 +16,6 @@ enum ButtonStateEnum
 
 class ButtonState
 {
-
 private:
 #if BUTTON_STATE_PRINT
     const String buttonStateNames[6] = {
@@ -28,6 +27,7 @@ private:
         "LONG_PRESSED",
     };
 #endif
+
     ButtonStateEnum currentState = IDLE;
     bool enteredState = true;
 
@@ -45,6 +45,7 @@ public:
             currentState = newState;
         }
     }
+
     bool justEntered()
     {
         if (enteredState)

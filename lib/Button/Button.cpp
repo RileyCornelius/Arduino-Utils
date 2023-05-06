@@ -1,9 +1,5 @@
 #include "Button.h"
 
-/**--------------------------------------------------------------------------------------
- * Initialization
- *-------------------------------------------------------------------------------------*/
-
 Button::Button()
 {
 }
@@ -12,10 +8,6 @@ Button::Button(uint8_t pinNumber, uint8_t inputMode /* = INPUT_PULLUP */, uint8_
 {
     setPinMode(pinNumber, inputMode, activeState);
 }
-
-/**--------------------------------------------------------------------------------------
- * Initialization
- *-------------------------------------------------------------------------------------*/
 
 /**
  * Default inputMode: INPUT_PULLUP - Default activeState: LOW
@@ -29,23 +21,6 @@ void Button::setPinMode(uint8_t pinNumber, uint8_t inputMode /* = INPUT_PULLUP *
     pin = pinNumber;
     activeState = buttonActiveState;
 }
-
-void Button::setDebounceDelay(uint16_t debounceDelayMs)
-{
-    debounceDelay = debounceDelayMs;
-}
-void Button::setClickDelay(uint16_t clickDelayMs)
-{
-    clickDelay = clickDelayMs;
-}
-void Button::setLongPressDelay(uint16_t longPressDelayMs)
-{
-    longPressDelay = longPressDelayMs;
-}
-
-/**--------------------------------------------------------------------------------------
- * Public Functions
- *-------------------------------------------------------------------------------------*/
 
 bool Button::clicked()
 {
