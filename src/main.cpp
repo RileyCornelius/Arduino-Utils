@@ -252,13 +252,13 @@ void buttonCallbacks()
 
 #include <SimpleButton.h>
 
-SimpleButton simpleButton(2, INPUT, 0);
+SimpleButton simpleButton(2, INPUT, LOW);
 
 void setup()
 {
   Serial.begin(115200);
   // button.init(D2, INPUT, LOW);
-  buttonCallbacks();
+  // buttonCallbacks();
 }
 
 void loop()

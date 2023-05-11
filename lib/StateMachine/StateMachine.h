@@ -37,12 +37,21 @@
 //     handleLedOff,
 //     NULL,
 //     NULL);
-
 // State LedBlinking(
 //     "LedBlinking",
 //     NULL,
 //     handleLedBlinking,
 //     NULL);
+
+// StateMachine ledState(LedOff);
+// void loop()
+// {
+//     if (button.released())
+//     {
+//         ledState.set(LedOn);
+//     }
+// ledState.handle();
+// }
 
 typedef void (*FunctionCallback)();
 

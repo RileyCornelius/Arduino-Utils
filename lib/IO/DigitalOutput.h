@@ -11,14 +11,13 @@ public:
     DigitalOutput(){};
     DigitalOutput(uint8_t pinNumber) { init(pinNumber); }
 
-    /**
-     * \param pinNumber The pin number of the digital output
-     */
     void init(uint8_t pinNumber)
     {
         pin = pinNumber;
         pinMode(pin, OUTPUT);
     }
+
+    bool isOn() { return digitalRead(pin); }
 
     void on() { digitalWrite(pin, HIGH); }
 

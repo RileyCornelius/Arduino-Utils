@@ -44,10 +44,12 @@ public:
         bool currentState = digitalRead(pin);
         uint32_t now = millis();
 
-        if (currentState != lastState) // Update lastTime if the state changed
+        if (currentState != lastState)
+        {
             lastTime = now;
-
-        if (now - lastTime > debounceDelay && currentState != heldState)
+            lastState = currentState;
+        }
+        else if (now - lastTime > debounceDelay && currentState != heldState)
         {
             heldState = currentState; // Prevents entering this block again on the same press
             if (currentState == activeState)
@@ -55,7 +57,6 @@ public:
                 return true;
             }
         }
-        lastState = currentState;
 
         return false;
     }
