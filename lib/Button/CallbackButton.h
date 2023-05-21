@@ -16,6 +16,7 @@ private:
     func_t releasedCallback = nullptr;
     func_t longPressedCallback = nullptr;
     func_t longPressReleasedCallback = nullptr;
+    func_t heldCallback = nullptr;
 
 public:
     void setClickedCallback(func_t funcCallback) { clickedCallback = funcCallback; }
@@ -25,6 +26,7 @@ public:
     void setReleasedCallback(func_t funcCallback) { releasedCallback = funcCallback; }
     void setLongPressedCallback(func_t funcCallback) { longPressedCallback = funcCallback; }
     void setLongPressReleasedCallback(func_t funcCallback) { longPressReleasedCallback = funcCallback; }
+    void setHeldCallback(func_t funcCallback) { heldCallback = funcCallback; }
 
     void run()
     {
@@ -44,5 +46,7 @@ public:
             longPressedCallback();
         if (longPressReleasedCallback != nullptr && longPressReleased())
             longPressReleasedCallback();
+        if (heldCallback != nullptr && held())
+            heldCallback();
     }
 };

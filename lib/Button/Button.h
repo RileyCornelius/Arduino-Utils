@@ -1,11 +1,56 @@
 #pragma once
 
 #include <Arduino.h>
-#include "ButtonState.h"
 
 class Button
 {
 private:
+    /**--------------------------------------------------------------------------------------
+     * State Machine
+     *-------------------------------------------------------------------------------------*/
+    enum ButtonStateEnum
+    {
+        IDLE,
+        DEBOUNCING,
+        PRESSED,
+        CLICKED,
+        RELEASED,
+        LONG_PRESSED,
+    };
+
+    class ButtonState
+    {
+    private:
+        ButtonStateEnum currentState = IDLE;
+        bool enteredState = true;
+
+    public:
+        bool is(ButtonStateEnum state) { return (currentState == state); }
+        ButtonStateEnum get() { return currentState; }
+        void set(ButtonStateEnum newState)
+        {
+            if (currentState != newState)
+            {
+                enteredState = true;
+                currentState = newState;
+            }
+        }
+
+        bool justEntered()
+        {
+            if (enteredState)
+            {
+                enteredState = false;
+                return true;
+            }
+            return false;
+        }
+    };
+
+private:
+    /**--------------------------------------------------------------------------------------
+     * Private Variables
+     *-------------------------------------------------------------------------------------*/
     ButtonState state;
 
     bool activeState;
@@ -21,6 +66,9 @@ private:
     uint16_t longPressDelay = 1000;
 
 public:
+    /**--------------------------------------------------------------------------------------
+     * Public Functions
+     *-------------------------------------------------------------------------------------*/
     Button();
     Button(uint8_t pinNumber, uint8_t inputMode = INPUT_PULLUP, uint8_t activeState = LOW);
 
