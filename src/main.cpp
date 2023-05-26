@@ -190,10 +190,10 @@ void stateMachineTest()
   ledState.handle();
 }
 
-Button button(2, INPUT, 0);
-
 void buttonTest()
 {
+  static Button button(2);
+
   button.check();
 
   if (button.released())
@@ -232,10 +232,10 @@ void buttonTest()
   }
 }
 
-CallbackButton callbackButton(2, INPUT, 0);
-
 void buttonCallbacks()
 {
+  static CallbackButton callbackButton(2);
+
   callbackButton.setClickedCallback([]()
                                     { Serial.println("Button clicked"); });
   callbackButton.setDoubleClickedCallback([]()
@@ -252,21 +252,30 @@ void buttonCallbacks()
                                      { Serial.println("Button released"); });
 }
 
-Button button(2, INPUT, LOW);
-StopWatch stopWatch;
-Timer timer(1000);
-
 void stopWatchTest()
 {
-  if (button.clicked())
+  static StopWatch stopWatch;
+  static Timer timer(1000);
+  static SimpleButton button(1);
+  static SimpleButton button2(3);
+
+  if (button.pressed())
   {
-    Serial.println("Button pressed");
-    (stopWatch.isRunning() ? stopWatch.stop() : stopWatch.start());
+    if (stopWatch.isRunning())
+    {
+      Serial.println("stop");
+      stopWatch.stop();
+    }
+    else
+    {
+      Serial.println("start");
+      stopWatch.start();
+    }
   }
 
-  if (button.longPressed())
+  if (button2.pressed())
   {
-    Serial.println("Button long pressed");
+    Serial.println("reset");
     stopWatch.reset();
   }
 
@@ -281,6 +290,7 @@ void setup()
   Serial.begin(115200);
   // button.init(D2, INPUT, LOW);
   // buttonCallbacks();
+  // stopWatch.start();
 }
 
 void loop()

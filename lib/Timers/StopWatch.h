@@ -10,7 +10,7 @@ private:
 public:
     void start()
     {
-        startTime = millis();
+        startTime = millis() - (stopTime - startTime);
         running = true;
     }
 
