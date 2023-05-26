@@ -256,7 +256,7 @@ void stopWatchTest()
 {
   static StopWatch stopWatch;
   static Timer timer(1000);
-  static SimpleButton button(1);
+  static SimpleButton button(2);
   static SimpleButton button2(3);
 
   if (button.pressed())
@@ -273,7 +273,7 @@ void stopWatchTest()
     }
   }
 
-  if (button2.pressed())
+  if (stopWatch.getTime() > 5000)
   {
     Serial.println("reset");
     stopWatch.reset();
