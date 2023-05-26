@@ -11,6 +11,8 @@
 #include <StateMachine.h>
 #include <Button.h>
 #include <CallbackButton.h>
+#include <SimpleButton.h>
+#include <StopWatch.h>
 
 static const char *LOG_TAG = "[Main]";
 
@@ -250,9 +252,29 @@ void buttonCallbacks()
                                      { Serial.println("Button released"); });
 }
 
-#include <SimpleButton.h>
+Button button(2, INPUT, LOW);
+StopWatch stopWatch;
+Timer timer(1000);
 
-SimpleButton simpleButton(2, INPUT, LOW);
+void stopWatchTest()
+{
+  if (button.clicked())
+  {
+    Serial.println("Button pressed");
+    (stopWatch.isRunning() ? stopWatch.stop() : stopWatch.start());
+  }
+
+  if (button.longPressed())
+  {
+    Serial.println("Button long pressed");
+    stopWatch.reset();
+  }
+
+  if (timer.ready())
+  {
+    Serial.println(stopWatch.getTime() / 1000);
+  }
+}
 
 void setup()
 {
@@ -263,10 +285,8 @@ void setup()
 
 void loop()
 {
-  if (simpleButton.pressed())
-  {
-    Serial.println("Button pressed");
-  }
+  stopWatchTest();
+
   // callbackButton.run();
   // buttonTest();
 
