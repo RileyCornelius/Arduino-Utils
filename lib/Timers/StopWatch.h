@@ -10,12 +10,18 @@ private:
 public:
     void start()
     {
+        if (running)
+            return;
+
         startTime = millis();
         running = true;
     }
 
     void stop()
     {
+        if (!running)
+            return;
+
         duration += millis() - startTime;
         running = false;
     }
