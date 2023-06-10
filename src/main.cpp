@@ -8,7 +8,7 @@
 #include <Logger.h>
 #include <CSV.h>
 #include <CTime.h>
-#include <StateMachine.h>
+#include <FSM.h>
 #include <Button.h>
 #include <CallbackButton.h>
 #include <SimpleButton.h>
@@ -145,51 +145,6 @@ void csvTest()
   Serial.printf("data: %s at column: %d, row: %d", dataAt.c_str(), columnIndex, rowIndex);
 }
 
-State LedOn(
-    "LedOn",
-    []()
-    { Serial.println("LedOn"); },
-    NULL,
-    NULL);
-
-State LedOff(
-    "LedOff",
-    []()
-    { Serial.println("LedOff"); },
-    NULL,
-    NULL);
-
-State LedBlinking(
-    "LedBlinking",
-    NULL,
-    []()
-    {
-  static unsigned long lastTime = 0;
-  static bool ledState = false;
-  if (millis() - lastTime > 1000)
-  {
-    Serial.println("Led:" + String(ledState ? "On" : "Off"));
-    lastTime = millis();
-    ledState = !ledState;
-  } },
-    NULL);
-
-StateMachine ledState(LedOff);
-
-void stateMachineTest()
-{
-  static int x = 0;
-  if (x == 0)
-    ledState.set(LedOn);
-  if (x == 1)
-    ledState.set(LedOff);
-  if (x == 2)
-    ledState.set(LedBlinking);
-
-  x++;
-  ledState.handle();
-}
-
 void buttonTest()
 {
   static Button button(2);
@@ -285,6 +240,54 @@ void stopWatchTest()
   }
 }
 
+// State Machine Example:
+
+void enterLedOn()
+{
+  // digitalWrite(LED_BUILTIN, HIGH);
+  Serial.println("LED ON");
+}
+
+void enterLedOff()
+{
+  // digitalWrite(LED_BUILTIN, LOW);
+  Serial.println("LED OFF");
+}
+
+void handleLedBlinking()
+{
+  static unsigned long lastTime = 0;
+  static bool ledState = false;
+
+  if (millis() - lastTime > 500)
+  {
+    lastTime = millis();
+    ledState = !ledState;
+    // digitalWrite(LED_BUILTIN, ledState);
+    Serial.println("LED BLINKING: " + String(ledState));
+  }
+}
+
+State LedOn(enterLedOn, NO_HANDLE, NO_EXIT);
+State LedOff(enterLedOff, NO_HANDLE, NO_EXIT);
+State LedBlinking(NO_ENTER, handleLedBlinking, NO_EXIT);
+
+FiniteStateMachine ledStateMachine(LedOff);
+
+void loopExample()
+{
+  State *currentState = ledStateMachine.getCurrentState();
+
+  if (currentState == &LedOff)
+    ledStateMachine.timedTransitionTo(LedOn, 1000);
+  else if (currentState == &LedOn)
+    ledStateMachine.timedTransitionTo(LedBlinking, 1000);
+  else if (currentState == &LedBlinking)
+    ledStateMachine.timedTransitionTo(LedOff, 5000);
+
+  ledStateMachine.run();
+}
+
 void setup()
 {
   Serial.begin(115200);
@@ -295,8 +298,9 @@ void setup()
 
 void loop()
 {
-  stopWatchTest();
+  loopExample();
 
+  // stopWatchTest();
   // callbackButton.run();
   // buttonTest();
 
