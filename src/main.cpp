@@ -8,11 +8,11 @@
 #include <Logger.h>
 #include <CSV.h>
 #include <CTime.h>
-#include <FSM.h>
 #include <Button.h>
 #include <CallbackButton.h>
 #include <SimpleButton.h>
 #include <StopWatch.h>
+#include <FSM.h>
 
 static const char *LOG_TAG = "[Main]";
 
@@ -242,19 +242,24 @@ void stopWatchTest()
 
 // State Machine Example:
 
-void enterLedOn()
+void ledOn();
+void ledOff();
+void ledBlink();
+bool buttonPressed();
+
+void ledOn()
 {
   // digitalWrite(LED_BUILTIN, HIGH);
   Serial.println("LED ON");
 }
 
-void enterLedOff()
+void ledOff()
 {
   // digitalWrite(LED_BUILTIN, LOW);
   Serial.println("LED OFF");
 }
 
-void handleLedBlinking()
+void ledBlink()
 {
   static unsigned long lastTime = 0;
   static bool ledState = false;
@@ -268,43 +273,36 @@ void handleLedBlinking()
   }
 }
 
-bool LedBlinkingTransitionToLedOff()
+bool buttonPressed()
 {
   static SimpleButton button(2);
   return button.pressed();
 }
 
-State LedOn(enterLedOn, NO_HANDLE, NO_EXIT);
-State LedOff(enterLedOff, NO_HANDLE, NO_EXIT);
-State LedBlinking(NO_ENTER, handleLedBlinking, NO_EXIT);
+State LedOn(ledOn, NO_HANDLE, NO_EXIT);
+State LedOff(ledOff, NO_HANDLE, NO_EXIT);
+State LedBlinking(ledBlink);
 
-FiniteStateMachine ledStateMachine(LedOff);
+FSM ledStateMachine(LedOff);
 
-void setupExample()
+void fsmInitTransitions()
 {
   ledStateMachine.addTimedTransition(LedOff, LedOn, 1000);
   ledStateMachine.addTimedTransition(LedOn, LedBlinking, 1000);
   ledStateMachine.addTimedTransition(LedBlinking, LedOff, 5000);
-  ledStateMachine.addTransition(LedBlinking, LedOff, LedBlinkingTransitionToLedOff);
-}
-
-void loopExample()
-{
-  ledStateMachine.run();
+  ledStateMachine.addTransition(LedBlinking, LedOff, buttonPressed);
 }
 
 void setup()
 {
   Serial.begin(115200);
-  // button.init(D2, INPUT, LOW);
-  // buttonCallbacks();
-  // stopWatch.start();
-  setupExample();
+
+  fsmInitTransitions();
 }
 
 void loop()
 {
-  loopExample();
+  ledStateMachine.run();
 
   // stopWatchTest();
   // callbackButton.run();

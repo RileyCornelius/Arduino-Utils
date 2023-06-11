@@ -18,9 +18,9 @@ private:
     std::function<void()> onHandle = NULL;
 
 public:
-    String name;
     std::list<Transition> transitions;
 
+public:
     State(std::function<void()> onHandle)
         : onHandle(onHandle) {}
 
@@ -46,49 +46,54 @@ public:
     }
 };
 
-class Transition
+struct Transition
 {
-public:
-    Transition(State *stateFrom, State *stateTo, std::function<bool()> condition)
-        : stateFrom(stateFrom), stateTo(stateTo), condition(condition) {}
+    Transition(State *stateTo, std::function<bool()> condition)
+        : stateTo(stateTo), condition(condition) {}
 
-    Transition(State *stateFrom, State *stateTo, uint32_t interval)
-        : stateFrom(stateFrom), stateTo(stateTo), interval(interval) {}
+    Transition(State *stateTo, uint32_t interval)
+        : stateTo(stateTo), interval(interval) {}
 
-    State *stateFrom;
     State *stateTo;
     uint32_t interval = 0;
     std::function<bool()> condition = NULL;
 };
 
-class FiniteStateMachine
+class FSM
 {
 private:
     State *currentState;
     uint32_t stateChangeTime;
+    bool initialized = false;
 
 public:
-    FiniteStateMachine(State &initialState)
+    FSM(State &initialState)
     {
         currentState = &initialState;
-        stateChangeTime = millis();
     }
 
     void run()
     {
+        if (!initialized) // first run only
+        {
+            initialized = true;
+            currentState->enter();
+            stateChangeTime = millis();
+        }
+
         for (Transition transition : currentState->transitions)
         {
             if (transition.condition != NULL)
             {
                 if (transition.condition())
                 {
-                    transitionTo(transition.stateTo);
+                    transitionTo(*transition.stateTo);
                     break;
                 }
             }
-            else if (getTimeInState() > transition.interval)
+            else if (getTimeInState() >= transition.interval)
             {
-                transitionTo(transition.stateTo);
+                transitionTo(*transition.stateTo);
                 break;
             }
         }
@@ -96,27 +101,33 @@ public:
         currentState->handle();
     }
 
-    void addTransition(State &stateFrom, State &stateTo, std::function<bool()> condition)
-    {
-        stateFrom.transitions.push_back(Transition(&stateFrom, &stateTo, condition));
-    }
-
-    void addTimedTransition(State &stateFrom, State &stateTo, uint32_t interval)
-    {
-        stateFrom.transitions.push_back(Transition(&stateFrom, &stateTo, interval));
-    }
-
-    void transitionTo(State *newState)
+    void transitionTo(State &newState)
     {
         currentState->exit();
-        currentState = newState;
+        currentState = &newState;
         currentState->enter();
         stateChangeTime = millis();
     }
 
-    State *getState()
+    void timedTransitionTo(State &newState, uint32_t interval)
     {
-        return currentState;
+        if (getTimeInState() >= interval)
+            transitionTo(newState);
+    }
+
+    void addTransition(State &stateFrom, State &stateTo, std::function<bool()> condition)
+    {
+        stateFrom.transitions.push_back(Transition(&stateTo, condition));
+    }
+
+    void addTimedTransition(State &stateFrom, State &stateTo, uint32_t interval)
+    {
+        stateFrom.transitions.push_back(Transition(&stateTo, interval));
+    }
+
+    State &getState()
+    {
+        return *currentState;
     }
 
     bool isState(State &state)
