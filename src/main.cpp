@@ -274,17 +274,15 @@ State LedBlinking(NO_ENTER, handleLedBlinking, NO_EXIT);
 
 FiniteStateMachine ledStateMachine(LedOff);
 
+void setupExample()
+{
+  ledStateMachine.addTimedTransition(&LedOff, &LedOn, 1000);
+  ledStateMachine.addTimedTransition(&LedOn, &LedBlinking, 1000);
+  ledStateMachine.addTimedTransition(&LedBlinking, &LedOff, 5000);
+}
+
 void loopExample()
 {
-  State *currentState = ledStateMachine.getCurrentState();
-
-  if (currentState == &LedOff)
-    ledStateMachine.timedTransitionTo(LedOn, 1000);
-  else if (currentState == &LedOn)
-    ledStateMachine.timedTransitionTo(LedBlinking, 1000);
-  else if (currentState == &LedBlinking)
-    ledStateMachine.timedTransitionTo(LedOff, 5000);
-
   ledStateMachine.run();
 }
 
@@ -294,6 +292,7 @@ void setup()
   // button.init(D2, INPUT, LOW);
   // buttonCallbacks();
   // stopWatch.start();
+  setupExample();
 }
 
 void loop()

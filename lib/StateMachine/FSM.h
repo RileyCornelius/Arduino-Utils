@@ -7,15 +7,18 @@
 #define NO_HANDLE NULL
 #define NO_EXIT NULL
 
+class Transition; // forward declaration
+
 class State
 {
 private:
     std::function<void()> onEnter;
     std::function<void()> onExit;
     std::function<void()> onHandle;
-    // std::function<State *()> transition;
 
 public:
+    Transition *transition = NULL;
+
     State(std::function<void()> onHandle)
         : onHandle(onHandle) {}
 
@@ -41,50 +44,77 @@ public:
     }
 };
 
+class Transition
+{
+public:
+    Transition(State *stateFrom, State *stateTo, std::function<bool()> condition)
+        : stateFrom(stateFrom), stateTo(stateTo), condition(condition) {}
+
+    Transition(State *stateFrom, State *stateTo, uint32_t interval)
+        : stateFrom(stateFrom), stateTo(stateTo), interval(interval) {}
+
+    State *stateFrom;
+    State *stateTo;
+    uint32_t interval = 0;
+    std::function<bool()> condition = NULL;
+};
+
 class FiniteStateMachine
 {
+private:
+    State *currentState;
+    uint32_t stateChangeTime;
+
 public:
     FiniteStateMachine(State &initialState)
     {
-        state = &initialState;
+        currentState = &initialState;
         stateChangeTime = millis();
     }
 
     void run()
     {
-        state->handle();
+        if (currentState->transition != NULL)
+        {
+            if (currentState->transition->condition != NULL && currentState->transition->condition())
+                transitionTo(*currentState->transition->stateTo);
+            else if (getTimeInState() > currentState->transition->interval)
+                transitionTo(*currentState->transition->stateTo);
+        }
+
+        currentState->handle();
+    }
+
+    void addTransition(State *stateFrom, State *stateTo, std::function<bool()> condition)
+    {
+        stateFrom->transition = new Transition(stateFrom, stateTo, condition);
+    }
+
+    void addTimedTransition(State *stateFrom, State *stateTo, uint32_t interval)
+    {
+        stateFrom->transition = new Transition(stateFrom, stateTo, interval);
     }
 
     void transitionTo(State &newState)
     {
-        state->exit();
-        state = &newState;
-        state->enter();
+        currentState->exit();
+        currentState = &newState;
+        currentState->enter();
         stateChangeTime = millis();
     }
 
-    void timedTransitionTo(State &newState, uint32_t interval)
+    State *getState()
     {
-        if (timeInCurrentState() > interval)
-            transitionTo(newState);
+        return currentState;
     }
 
-    State *getCurrentState()
+    bool isState(State &state)
     {
-        return state;
+        return (&state == this->currentState);
     }
 
-    bool isInState(State &state)
-    {
-        return (&state == this->state);
-    }
-
-    uint32_t timeInCurrentState()
+    uint32_t getTimeInState()
     {
         return millis() - stateChangeTime;
     }
-
-private:
-    State *state;
-    uint32_t stateChangeTime;
 };
