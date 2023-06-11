@@ -268,6 +268,12 @@ void handleLedBlinking()
   }
 }
 
+bool LedBlinkingTransitionToLedOff()
+{
+  static SimpleButton button(2);
+  return button.pressed();
+}
+
 State LedOn(enterLedOn, NO_HANDLE, NO_EXIT);
 State LedOff(enterLedOff, NO_HANDLE, NO_EXIT);
 State LedBlinking(NO_ENTER, handleLedBlinking, NO_EXIT);
@@ -276,9 +282,10 @@ FiniteStateMachine ledStateMachine(LedOff);
 
 void setupExample()
 {
-  ledStateMachine.addTimedTransition(&LedOff, &LedOn, 1000);
-  ledStateMachine.addTimedTransition(&LedOn, &LedBlinking, 1000);
-  ledStateMachine.addTimedTransition(&LedBlinking, &LedOff, 5000);
+  ledStateMachine.addTimedTransition(LedOff, LedOn, 1000);
+  ledStateMachine.addTimedTransition(LedOn, LedBlinking, 1000);
+  ledStateMachine.addTimedTransition(LedBlinking, LedOff, 5000);
+  ledStateMachine.addTransition(LedBlinking, LedOff, LedBlinkingTransitionToLedOff);
 }
 
 void loopExample()

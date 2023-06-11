@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <functional>
+#include <list>
 
 #define NO_ENTER NULL
 #define NO_HANDLE NULL
@@ -12,12 +13,13 @@ class Transition; // forward declaration
 class State
 {
 private:
-    std::function<void()> onEnter;
-    std::function<void()> onExit;
-    std::function<void()> onHandle;
+    std::function<void()> onEnter = NULL;
+    std::function<void()> onExit = NULL;
+    std::function<void()> onHandle = NULL;
 
 public:
-    Transition *transition = NULL;
+    String name;
+    std::list<Transition> transitions;
 
     State(std::function<void()> onHandle)
         : onHandle(onHandle) {}
@@ -74,31 +76,40 @@ public:
 
     void run()
     {
-        if (currentState->transition != NULL)
+        for (Transition transition : currentState->transitions)
         {
-            if (currentState->transition->condition != NULL && currentState->transition->condition())
-                transitionTo(*currentState->transition->stateTo);
-            else if (getTimeInState() > currentState->transition->interval)
-                transitionTo(*currentState->transition->stateTo);
+            if (transition.condition != NULL)
+            {
+                if (transition.condition())
+                {
+                    transitionTo(transition.stateTo);
+                    break;
+                }
+            }
+            else if (getTimeInState() > transition.interval)
+            {
+                transitionTo(transition.stateTo);
+                break;
+            }
         }
 
         currentState->handle();
     }
 
-    void addTransition(State *stateFrom, State *stateTo, std::function<bool()> condition)
+    void addTransition(State &stateFrom, State &stateTo, std::function<bool()> condition)
     {
-        stateFrom->transition = new Transition(stateFrom, stateTo, condition);
+        stateFrom.transitions.push_back(Transition(&stateFrom, &stateTo, condition));
     }
 
-    void addTimedTransition(State *stateFrom, State *stateTo, uint32_t interval)
+    void addTimedTransition(State &stateFrom, State &stateTo, uint32_t interval)
     {
-        stateFrom->transition = new Transition(stateFrom, stateTo, interval);
+        stateFrom.transitions.push_back(Transition(&stateFrom, &stateTo, interval));
     }
 
-    void transitionTo(State &newState)
+    void transitionTo(State *newState)
     {
         currentState->exit();
-        currentState = &newState;
+        currentState = newState;
         currentState->enter();
         stateChangeTime = millis();
     }
@@ -110,7 +121,7 @@ public:
 
     bool isState(State &state)
     {
-        return (&state == this->currentState);
+        return (currentState == &state);
     }
 
     uint32_t getTimeInState()
