@@ -1,16 +1,9 @@
 #pragma once
 
 #include <Arduino.h>
+#include <map>
 
 #define DEBUG 1
-
-#if DEBUG
-const char *stateNames[] = {
-    "ledOn",
-    "ledOff",
-    "ledBlinking",
-};
-#endif
 
 enum EnumState
 {
@@ -20,6 +13,13 @@ enum EnumState
 
     MAX_SIZE
 };
+
+#if DEBUG
+std::map<volatile EnumState, const char *> stateMap = {
+    {LedOn, "ledOn"},
+    {LedOff, "ledOff"},
+    {LedBlinking, "ledBlinking"}};
+#endif
 
 namespace LedState
 {
@@ -32,7 +32,7 @@ namespace LedState
         if (state != newState)
         {
 #if DEBUG
-            Serial.println(String(stateNames[state]) + " => " + stateNames[newState]);
+            Serial.println(String(stateMap[state]) + " => " + stateMap[newState]);
 #endif
             state = newState;
         }

@@ -65,6 +65,21 @@ private:
     uint16_t clickDelay = 400;
     uint16_t longPressDelay = 1000;
 
+    bool clickedChecked = false;
+
+    void internalCheck(bool &checked)
+    {
+        if (!checked)
+        {
+            checked = true;
+            check();
+        }
+        else
+        {
+            checked = false;
+        }
+    }
+
 public:
     /**--------------------------------------------------------------------------------------
      * Public Functions

@@ -32,7 +32,14 @@ void Button::init(uint8_t pinNumber, uint8_t inputMode /* = INPUT_PULLUP */, uin
 
 bool Button::clicked()
 {
-    return (state.is(CLICKED) && clickCount == 1);
+    if (!clickedChecked)
+    {
+        clickedChecked = true;
+        check();
+    }
+
+    clickedChecked = (state.is(CLICKED) && clickCount == 1);
+    return clickedChecked;
 }
 
 bool Button::doubleClicked()

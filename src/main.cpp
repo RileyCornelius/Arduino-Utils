@@ -14,6 +14,8 @@
 #include <StopWatch.h>
 #include <FSM.h>
 
+// #include <fmt/core.h>
+
 static const char *LOG_TAG = "[Main]";
 
 // CTime ntpTime;
@@ -289,8 +291,8 @@ void fsmInitTransitions()
 {
   ledStateMachine.addTimedTransition(LedOff, LedOn, 1000);
   ledStateMachine.addTimedTransition(LedOn, LedBlinking, 1000);
-  ledStateMachine.addTimedTransition(LedBlinking, LedOff, 5000);
-  ledStateMachine.addTransition(LedBlinking, LedOff, buttonPressed);
+  ledStateMachine.addTimedTransition(LedBlinking, LedOff, 5000, buttonPressed);
+  // ledStateMachine.addTransition(LedBlinking, LedOff, buttonPressed);
 }
 
 void setup()
@@ -302,6 +304,13 @@ void setup()
 
 void loop()
 {
+  static Timer timer;
+  if (timer.ready())
+  {
+    uint16_t sleepTime = 1000;
+    timer.setPeriod(sleepTime);
+  }
+
   ledStateMachine.run();
 
   // stopWatchTest();
