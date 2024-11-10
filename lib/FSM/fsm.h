@@ -2,6 +2,7 @@
 
 // #include <array>
 // #include <vector>
+// #include <functional>
 
 template <typename T>
 struct Optional
@@ -9,11 +10,24 @@ struct Optional
     T value;
     bool hasValue;
 
-    constexpr Optional() : value{}, hasValue(false) {}
-    constexpr Optional(T t) : value(t), hasValue(true) {}
-    operator bool() const { return hasValue; }
-    auto operator==(T t) const -> bool { return hasValue && value == t; }
-    auto operator!=(T t) const -> bool { return !hasValue || value != t; }
+    constexpr Optional() : value{}, hasValue(false)
+    {
+    }
+    constexpr Optional(T t) : value(t), hasValue(true)
+    {
+    }
+    operator bool() const
+    {
+        return hasValue;
+    }
+    auto operator==(T t) const -> bool
+    {
+        return hasValue && value == t;
+    }
+    auto operator!=(T t) const -> bool
+    {
+        return !hasValue || value != t;
+    }
 };
 
 template <typename T>
@@ -25,26 +39,41 @@ private:
 
 public:
     template <size_t size>
-    constexpr Array(T (&initPtr)[size])
-        : beginPtr(initPtr), endPtr(initPtr + size) {}
+    constexpr Array(T (&ptr)[size]) : beginPtr(ptr), endPtr(ptr + size)
+    {
+    }
 
-    T &operator[](size_t index) { return beginPtr[index]; }
+    T &operator[](size_t index)
+    {
+        return beginPtr[index];
+    }
 
-    size_t size() { return static_cast<size_t>(endPtr - beginPtr); }
-    bool isEmpty() { return size() == 0; }
+    size_t size()
+    {
+        return static_cast<size_t>(endPtr - beginPtr);
+    }
 
-    T *begin() { return beginPtr; }
-    T *end() { return endPtr; }
+    T *begin()
+    {
+        return beginPtr;
+    }
+    T *end()
+    {
+        return endPtr;
+    }
 
-    T &front() { return *beginPtr; }
-    T &back() { return *(endPtr - 1); }
+    T &front()
+    {
+        return *beginPtr;
+    }
+    T &back()
+    {
+        return *(endPtr - 1);
+    }
 };
 
 namespace fsm
 {
-    template <typename S, typename E>
-    using Guard = std::function<bool(S &, E &)>;
-
     template <typename S, typename E, typename A>
     struct Transition
     {
@@ -52,19 +81,25 @@ namespace fsm
         Optional<S> stateTo{};
         Optional<E> event{};
         Optional<A> action{};
-        Guard<S, E> guard = nullptr;
 
         bool canTransit(S &state, E &evt)
         {
-            return stateFrom == state && (!event || event == evt) && (!guard || guard(state, evt));
+            return stateFrom == state && (!event || event == evt);
         }
     };
 
     template <typename S, typename E, typename A>
-    struct Fsm
+    class Fsm
     {
+    private:
         S currentState;
         Array<Transition<S, E, A>> transitions;
+
+    public:
+        template <size_t N>
+        constexpr Fsm(S initialState, Transition<S, E, A> (&transitionTable)[N]) : currentState(initialState), transitions(transitionTable)
+        {
+        }
 
         Optional<A> input(E event)
         {
@@ -81,9 +116,14 @@ namespace fsm
             }
             return Optional<A>{};
         }
+
+        S getState()
+        {
+            return currentState;
+        }
     };
 
-};
+}; // namespace fsm
 
 // ----------------
 // Example usage:
@@ -91,6 +131,7 @@ namespace fsm
 
 namespace elevator
 {
+
     enum State
     {
         Top,
@@ -114,10 +155,7 @@ namespace elevator
         {.stateFrom = Bottom, .stateTo = Top, .event = ButtonUp, .action = MoveUp},
     };
 
-    fsm::Fsm<State, Event, Action> fsm = {
-        .currentState = Top,
-        .transitions = transitions,
-    };
+    auto fsm = fsm::Fsm<State, Event, Action>(Top, transitions);
 
     class ElevatorController
     {
@@ -125,8 +163,9 @@ namespace elevator
         fsm::Fsm<State, Event, Action> fsm;
 
     public:
-        ElevatorController(fsm::Fsm<State, Event, Action> &fsm)
-            : fsm(fsm) {}
+        ElevatorController(fsm::Fsm<State, Event, Action> &fsm) : fsm(fsm)
+        {
+        }
 
         void trigger(Event event)
         {
@@ -150,7 +189,7 @@ namespace elevator
 
         void run()
         {
-            switch (fsm.currentState)
+            switch (fsm.getState())
             {
             case Top:
                 Serial.println("Top");
@@ -175,11 +214,11 @@ namespace elevator
         }
     };
 
-}
+} // namespace elevator
 
 void testt()
 {
-    static elevator::ElevatorController controller(elevator::fsm);
+    static auto controller = elevator::ElevatorController(elevator::fsm);
 
     if (random(2) == 0)
     {

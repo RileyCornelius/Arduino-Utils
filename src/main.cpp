@@ -13,6 +13,7 @@
 #include <SimpleButton.h>
 #include <StopWatch.h>
 #include <FSM.h>
+#include <iostream>
 
 // #include <fmt/core.h>
 
@@ -281,19 +282,19 @@ bool buttonPressed()
   return button.pressed();
 }
 
-State LedOn(ledOn, NO_HANDLE, NO_EXIT);
-State LedOff(ledOff, NO_HANDLE, NO_EXIT);
-State LedBlinking(ledBlink);
+// State LedOn(ledOn, NO_HANDLE, NO_EXIT);
+// State LedOff(ledOff, NO_HANDLE, NO_EXIT);
+// State LedBlinking(ledBlink);
 
-FSM ledStateMachine(LedOff);
+// FSM ledStateMachine(LedOff);
 
-void fsmInitTransitions()
-{
-  ledStateMachine.addTimedTransition(LedOff, LedOn, 1000);
-  ledStateMachine.addTimedTransition(LedOn, LedBlinking, 1000);
-  ledStateMachine.addTimedTransition(LedBlinking, LedOff, 5000, buttonPressed);
-  // ledStateMachine.addTransition(LedBlinking, LedOff, buttonPressed);
-}
+// void fsmInitTransitions()
+// {
+//   ledStateMachine.addTimedTransition(LedOff, LedOn, 1000);
+//   ledStateMachine.addTimedTransition(LedOn, LedBlinking, 1000);
+//   ledStateMachine.addTimedTransition(LedBlinking, LedOff, 5000, buttonPressed);
+//   // ledStateMachine.addTransition(LedBlinking, LedOff, buttonPressed);
+// }
 
 enum PlayerEvents
 {
@@ -303,13 +304,13 @@ enum PlayerEvents
   STOP
 };
 
-State Idle([]()
-           { Serial.println("idle"); }, NO_HANDLE, NO_EXIT);
-State Playing(NO_ENTER, []()
-              { Serial.println("playing"); }, NO_EXIT);
-State Paused(ledBlink);
+// State Idle([]()
+//            { Serial.println("idle"); }, NO_HANDLE, NO_EXIT);
+// State Playing(NO_ENTER, []()
+//               { Serial.println("playing"); }, NO_EXIT);
+// State Paused(ledBlink);
 
-FSM playerFSM(Idle);
+// FSM playerFSM(Idle);
 
 void playerInitTransitions()
 
@@ -322,7 +323,7 @@ void playerInitTransitions()
 }
 
 // #include "simple_fsm.h"
-#include "fsmh.h"
+#include "fsm.h"
 
 void setup()
 {
@@ -334,6 +335,7 @@ void setup()
 void loop()
 {
   testt();
+
   // delay(1000);
 
   // static Timer timer;
