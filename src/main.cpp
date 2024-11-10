@@ -12,7 +12,7 @@
 #include <CallbackButton.h>
 #include <SimpleButton.h>
 #include <StopWatch.h>
-#include <FSM.h>
+// #include <FSM.h>
 #include <iostream>
 
 // #include <fmt/core.h>
@@ -323,7 +323,8 @@ void playerInitTransitions()
 }
 
 // #include "simple_fsm.h"
-#include "fsm.h"
+// #include "fsm.h"
+#include "fsm3/fsm3_example.h"
 
 void setup()
 {
@@ -334,7 +335,7 @@ void setup()
 
 void loop()
 {
-  testt();
+  player3::test();
 
   // delay(1000);
 

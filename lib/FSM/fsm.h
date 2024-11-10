@@ -4,30 +4,19 @@
 // #include <vector>
 // #include <functional>
 
+#include <Arduino.h>
+
 template <typename T>
 struct Optional
 {
     T value;
     bool hasValue;
 
-    constexpr Optional() : value{}, hasValue(false)
-    {
-    }
-    constexpr Optional(T t) : value(t), hasValue(true)
-    {
-    }
-    operator bool() const
-    {
-        return hasValue;
-    }
-    auto operator==(T t) const -> bool
-    {
-        return hasValue && value == t;
-    }
-    auto operator!=(T t) const -> bool
-    {
-        return !hasValue || value != t;
-    }
+    constexpr Optional() : value{}, hasValue(false) {}
+    constexpr Optional(T t) : value(t), hasValue(true) {}
+    operator bool() const { return hasValue; }
+    auto operator==(T t) const -> bool { return hasValue && value == t; }
+    auto operator!=(T t) const -> bool { return !hasValue || value != t; }
 };
 
 template <typename T>
@@ -39,37 +28,17 @@ private:
 
 public:
     template <size_t size>
-    constexpr Array(T (&ptr)[size]) : beginPtr(ptr), endPtr(ptr + size)
-    {
-    }
+    constexpr Array(T (&ptr)[size]) : beginPtr(ptr), endPtr(ptr + size) {}
 
-    T &operator[](size_t index)
-    {
-        return beginPtr[index];
-    }
+    T &operator[](size_t index) { return beginPtr[index]; }
 
-    size_t size()
-    {
-        return static_cast<size_t>(endPtr - beginPtr);
-    }
+    size_t size() { return static_cast<size_t>(endPtr - beginPtr); }
 
-    T *begin()
-    {
-        return beginPtr;
-    }
-    T *end()
-    {
-        return endPtr;
-    }
+    T *begin() { return beginPtr; }
+    T *end() { return endPtr; }
 
-    T &front()
-    {
-        return *beginPtr;
-    }
-    T &back()
-    {
-        return *(endPtr - 1);
-    }
+    T &front() { return *beginPtr; }
+    T &back() { return *(endPtr - 1); }
 };
 
 namespace fsm
@@ -78,13 +47,14 @@ namespace fsm
     struct Transition
     {
         S stateFrom;
-        Optional<S> stateTo{};
-        Optional<E> event{};
+        S stateTo;
+        E event;
         Optional<A> action{};
+        std::function<bool()> guard = nullptr;
 
         bool canTransit(S &state, E &evt)
         {
-            return stateFrom == state && (!event || event == evt);
+            return stateFrom == state && (!event || event == evt) && (!guard || guard());
         }
     };
 
@@ -97,9 +67,8 @@ namespace fsm
 
     public:
         template <size_t N>
-        constexpr Fsm(S initialState, Transition<S, E, A> (&transitionTable)[N]) : currentState(initialState), transitions(transitionTable)
-        {
-        }
+        constexpr Fsm(S initialState, Transition<S, E, A> (&transitionTable)[N])
+            : currentState(initialState), transitions(transitionTable) {}
 
         Optional<A> input(E event)
         {
@@ -107,10 +76,7 @@ namespace fsm
             {
                 if (transition.canTransit(currentState, event))
                 {
-                    if (transition.stateTo.hasValue)
-                    {
-                        currentState = transition.stateTo.value;
-                    }
+                    currentState = transition.stateTo;
                     return transition.action;
                 }
             }
@@ -123,7 +89,7 @@ namespace fsm
         }
     };
 
-}; // namespace fsm
+};
 
 // ----------------
 // Example usage:
@@ -131,10 +97,18 @@ namespace fsm
 
 namespace elevator
 {
+    enum Direction
+    {
+        None,
+        Down,
+        Up,
+    };
 
     enum State
     {
         Top,
+        MovingUp,
+        MovingDown,
         Bottom,
     };
 
@@ -142,17 +116,22 @@ namespace elevator
     {
         ButtonUp,
         ButtonDown,
+        TopReached,
+        BottomReached,
     };
 
     enum Action
     {
         MoveUp,
         MoveDown,
+        StopMoving,
     };
 
     fsm::Transition<State, Event, Action> transitions[] = {
-        {.stateFrom = Top, .stateTo = Bottom, .event = ButtonDown, .action = MoveDown},
-        {.stateFrom = Bottom, .stateTo = Top, .event = ButtonUp, .action = MoveUp},
+        {.stateFrom = Top, .stateTo = MovingDown, .event = ButtonDown, .action = MoveDown},
+        {.stateFrom = MovingUp, .stateTo = Top, .event = TopReached, .action = StopMoving},
+        {.stateFrom = MovingDown, .stateTo = Bottom, .event = BottomReached, .action = StopMoving},
+        {.stateFrom = Bottom, .stateTo = MovingUp, .event = ButtonUp, .action = MoveUp},
     };
 
     auto fsm = fsm::Fsm<State, Event, Action>(Top, transitions);
@@ -161,11 +140,37 @@ namespace elevator
     {
     private:
         fsm::Fsm<State, Event, Action> fsm;
+        Direction direction = None;
+
+        // State methods
+
+        void top() { Serial.println("Top"); }
+        void bottom() { Serial.println("Bottom"); }
+        void movingUp() { Serial.println("Moving up"); }
+        void movingDown() { Serial.println("Moving down"); }
+
+        // Action methods
+
+        void moveUp()
+        {
+            direction = Up;
+            Serial.println("Direction up");
+        }
+
+        void moveDown()
+        {
+            direction = Down;
+            Serial.println("Direction down");
+        }
+
+        void stopMoving()
+        {
+            direction = None;
+            Serial.println("Stopped");
+        }
 
     public:
-        ElevatorController(fsm::Fsm<State, Event, Action> &fsm) : fsm(fsm)
-        {
-        }
+        ElevatorController(fsm::Fsm<State, Event, Action> &fsm) : fsm(fsm) {}
 
         void trigger(Event event)
         {
@@ -184,48 +189,48 @@ namespace elevator
             case MoveDown:
                 moveDown();
                 break;
+            case StopMoving:
+                stopMoving();
+                break;
             }
         }
 
         void run()
         {
-            switch (fsm.getState())
+            State state = fsm.getState();
+            switch (state)
             {
             case Top:
-                Serial.println("Top");
+                top();
                 break;
             case Bottom:
-                Serial.println("Bottom");
+                bottom();
+                break;
+            case MovingUp:
+                movingUp();
+                break;
+            case MovingDown:
+                movingDown();
                 break;
             default:
                 Serial.println("Unknown state");
                 break;
             }
         }
-
-        void moveUp()
-        {
-            Serial.println("Moving up");
-        }
-
-        void moveDown()
-        {
-            Serial.println("Moving down");
-        }
     };
 
-} // namespace elevator
-
-void testt()
-{
-    static auto controller = elevator::ElevatorController(elevator::fsm);
-
-    if (random(2) == 0)
+    void test()
     {
-        elevator::Event event = (random(2) == 0) ? elevator::ButtonUp : elevator::ButtonDown;
-        controller.trigger(event);
+        static auto controller = ElevatorController(fsm);
+
+        if (random(2) == 0)
+        {
+            Event event = static_cast<Event>(random(4));
+            controller.trigger(event);
+        }
+
+        controller.run();
+        delay(1000);
     }
 
-    controller.run();
-    delay(1000);
 }

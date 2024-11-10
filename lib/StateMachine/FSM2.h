@@ -8,32 +8,6 @@
 #define NO_HANDLE nullptr
 #define NO_EXIT nullptr
 
-// events
-// struct Play
-// {
-//     std::string title;
-// };
-// struct Pause;
-// struct Resume;
-// struct Stop;
-
-// // states need to be forward declared to be used in FSM struct declaration
-// struct Idle;
-// struct Playing;
-// struct Paused;
-
-// using FSM = M::PeerRoot<
-// 				Idle,
-// 				Playing,
-// 				Paused>;
-
-// alternatively, some macro magic can be invoked to simplify FSM structure declaration
-// using FSM = M::PeerRoot<
-// 				S(Idle),
-// 				S(Playing),
-// 				S(Paused)
-// 			>;
-
 // custom logger for recording all transitions
 struct Logger
 {
