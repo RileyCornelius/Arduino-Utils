@@ -8,6 +8,9 @@
 #define NO_HANDLE nullptr
 #define NO_EXIT nullptr
 
+#define BIND(func) std::bind(func, this)
+// #define FUNC2(func) [this]() { func(); }
+
 class Transition;
 
 class State
@@ -82,7 +85,7 @@ public:
                 transitionTo(*transition.stateTo);
                 break;
             }
-            if (transition.interval > 0 && getTimeInState() >= transition.interval)
+            else if (transition.interval > 0 && getTimeInState() >= transition.interval)
             {
                 transitionTo(*transition.stateTo);
                 break;
@@ -91,6 +94,13 @@ public:
 
         currentState->handle();
     }
+
+    State createState(std::function<void()> onEnter, std::function<void()> onHandle, std::function<void()> onExit)
+    {
+        return State(onEnter, onHandle, onExit);
+    }
+
+
 
     void transitionTo(State &newState)
     {

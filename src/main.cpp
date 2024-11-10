@@ -295,23 +295,62 @@ void fsmInitTransitions()
   // ledStateMachine.addTransition(LedBlinking, LedOff, buttonPressed);
 }
 
+enum PlayerEvents
+{
+  PLAY,
+  PAUSE,
+  RESUME,
+  STOP
+};
+
+State Idle([]()
+           { Serial.println("idle"); }, NO_HANDLE, NO_EXIT);
+State Playing(NO_ENTER, []()
+              { Serial.println("playing"); }, NO_EXIT);
+State Paused(ledBlink);
+
+FSM playerFSM(Idle);
+
+void playerInitTransitions()
+
+{
+  // playerFSM.addEventTransition(Idle, Playing, PLAY);
+  // playerFSM.addEventTransition(Playing, Paused, PAUSE);
+  // playerFSM.addEventTransition(Playing, Idle, STOP);
+  // playerFSM.addEventTransition(Paused, Playing, RESUME);
+  // playerFSM.addEventTransition(Paused, Idle, STOP);
+}
+
+// #include "simple_fsm.h"
+#include "fsmh.h"
+
 void setup()
 {
   Serial.begin(115200);
 
-  fsmInitTransitions();
+  // fsmInitTransitions();
 }
 
 void loop()
 {
-  static Timer timer;
-  if (timer.ready())
-  {
-    uint16_t sleepTime = 1000;
-    timer.setPeriod(sleepTime);
-  }
+  testt();
+  // delay(1000);
 
-  ledStateMachine.run();
+  // static Timer timer;
+  // if (timer.ready())
+  // {
+  //   uint16_t sleepTime = 1000;
+  //   timer.setPeriod(sleepTime);
+  // }
+
+  // ledStateMachine.run();
+
+  // static Button button(2);
+  // if (button.pressed())
+  // {
+  //   (playerFSM.getState() == Idle) ? playerFSM.trigger(PLAY) : playerFSM.trigger(PAUSE);
+  // }
+  // playerFSM.run();
 
   // stopWatchTest();
   // callbackButton.run();
