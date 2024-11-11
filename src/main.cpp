@@ -322,13 +322,8 @@ void playerInitTransitions()
   // playerFSM.addEventTransition(Paused, Idle, STOP);
 }
 
-// #include "test/fsm_test.h"
-// #include "test/fsm_test_2.h"
-// #include "test/fsm_test_3.h"
-#include "test/fsm_test_4.h"
-
-// #include "test/iot_fsm_test.h"
-// #include "test/iot_fsm_test_2.h"
+#include "test/fsm_test.h"
+// #include "test/fsm_simple_test.h"
 
 void setup()
 {
@@ -337,9 +332,7 @@ void setup()
 
 void loop()
 {
-  // iot_fsm_loop_test();
   fsm_loop_test();
-  // fsm_loop_test_2();
 
   // delay(1000);
 

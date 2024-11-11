@@ -2,28 +2,6 @@
 
 #include <functional>
 
-template <typename T>
-class Array
-{
-private:
-    T *beginPtr;
-    T *endPtr;
-
-public:
-    template <size_t N>
-    constexpr Array(T (&ptr)[N]) : beginPtr(ptr), endPtr(ptr + N) {}
-
-    T &operator[](size_t index) { return beginPtr[index]; }
-
-    size_t size() { return static_cast<size_t>(endPtr - beginPtr); }
-
-    T *begin() { return beginPtr; }
-    T *end() { return endPtr; }
-
-    T &front() { return *beginPtr; }
-    T &back() { return *(endPtr - 1); }
-};
-
 namespace fsm
 {
     struct State
@@ -38,25 +16,19 @@ namespace fsm
     };
 
     template <typename Event>
-    struct Transition
+    struct Fsm
     {
-        State *stateFrom;
-        State *stateTo;
-        Event event;
-        std::function<void()> action = nullptr;
-    };
+        struct Transition
+        {
+            Event event;
+            State *stateFrom;
+            State *stateTo;
+            std::function<void()> action = nullptr;
+        };
 
-    template <typename Event>
-    class Fsm
-    {
-    private:
         State *currentState;
-        Array<Transition<Event>> transitions;
-
-    public:
-        template <size_t N>
-        constexpr Fsm(State *initialState, Transition<Event> (&transitionTable)[N])
-            : currentState(initialState), transitions(transitionTable) {}
+        std::vector<Transition> transitions;
+        std::function<void(Event &event, State &from, State &to)> onTransition = nullptr;
 
         void _call(std::function<void()> callback)
         {
@@ -74,6 +46,8 @@ namespace fsm
                     currentState = transition.stateTo;
                     _call(currentState->onEnter);
                     _call(transition.action);
+                    if (onTransition)
+                        onTransition(event, *transition.stateFrom, *transition.stateTo);
                     return true;
                 }
             }
@@ -83,11 +57,6 @@ namespace fsm
         void handle()
         {
             _call(currentState->onHandle);
-        }
-
-        State getState()
-        {
-            return *currentState;
         }
     };
 };

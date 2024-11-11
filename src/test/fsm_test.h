@@ -1,4 +1,5 @@
 #include <Arduino.h>
+#include <map>
 
 #include "fsm.h"
 
@@ -22,6 +23,12 @@ namespace player
         MAX_EVENT_SIZE
     };
 
+    std::map<Event, const char *> eventNames = {
+        {PlayPressed, "PlayPressed"},
+        {PausePressed, "PausePressed"},
+        {StoppedPressed, "StoppedPressed"},
+    };
+
     fsm::State Playing = {.name = "Playing", .onHandle = playing};
     fsm::State Paused = {.name = "Paused", .onHandle = paused};
     fsm::State Idle = {.name = "Idle", .onHandle = idle};
@@ -35,13 +42,17 @@ namespace player
         },
         .onTransition = [](Event &event, fsm::State &from, fsm::State &to)
         {
-            log_d("Event: %d - State: %d => %d", event, from, to);
+            log_i("Event: %s - State: %s => %s", eventNames[event], from.name, to.name);
         },
     };
 
     void trigger(Event event)
     {
-        fsm.trigger(event);
+        bool stateChanged = fsm.trigger(event);
+        if (!stateChanged)
+        {
+            log_w("Invalid transition from %s with event %s", fsm.currentState->name, eventNames[event]);
+        }
     }
 
     void run()
