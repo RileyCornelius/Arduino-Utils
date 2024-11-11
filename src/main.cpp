@@ -296,13 +296,13 @@ bool buttonPressed()
 //   // ledStateMachine.addTransition(LedBlinking, LedOff, buttonPressed);
 // }
 
-enum PlayerEvents
-{
-  PLAY,
-  PAUSE,
-  RESUME,
-  STOP
-};
+// enum PlayerEvents
+// {
+//   PLAY,
+//   PAUSE,
+//   RESUME,
+//   STOP
+// };
 
 // State Idle([]()
 //            { Serial.println("idle"); }, NO_HANDLE, NO_EXIT);
@@ -322,20 +322,24 @@ void playerInitTransitions()
   // playerFSM.addEventTransition(Paused, Idle, STOP);
 }
 
-// #include "simple_fsm.h"
-// #include "fsm.h"
-#include "fsm_example.h"
+// #include "test/fsm_test.h"
+// #include "test/fsm_test_2.h"
+// #include "test/fsm_test_3.h"
+#include "test/fsm_test_4.h"
+
+// #include "test/iot_fsm_test.h"
+// #include "test/iot_fsm_test_2.h"
 
 void setup()
 {
   Serial.begin(115200);
-
-  // fsmInitTransitions();
 }
 
 void loop()
 {
-  player::test();
+  // iot_fsm_loop_test();
+  fsm_loop_test();
+  // fsm_loop_test_2();
 
   // delay(1000);
 

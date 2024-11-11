@@ -47,38 +47,32 @@ namespace fsm
         void handle() { _exec(onHandle); }
     };
 
-    template <typename E>
+    template <typename Event>
     struct Transition
     {
         State *stateFrom;
         State *stateTo;
-        E event;
+        Event event;
         std::function<void()> action = nullptr;
-        std::function<bool()> guard = nullptr;
-
-        bool canTransition(State *currentState, E &evt)
-        {
-            return stateFrom == currentState && event == evt && (!guard || !guard());
-        }
     };
 
-    template <typename E>
+    template <typename Event>
     class Fsm
     {
     private:
         State *currentState;
-        Array<Transition<E>> transitions;
+        Array<Transition<Event>> transitions;
 
     public:
         template <size_t N>
-        constexpr Fsm(State *initialState, Transition<E> (&transitionTable)[N])
+        constexpr Fsm(State *initialState, Transition<Event> (&transitionTable)[N])
             : currentState(initialState), transitions(transitionTable) {}
 
-        bool trigger(E event)
+        bool trigger(Event event)
         {
             for (auto &transition : transitions)
             {
-                if (transition.canTransition(currentState, event))
+                if (transition.stateFrom == currentState && transition.event == event)
                 {
                     currentState->exit();
                     currentState = transition.stateTo;
@@ -99,7 +93,7 @@ namespace fsm
             currentState->handle();
         }
 
-        State &getState()
+        State getState()
         {
             return *currentState;
         }

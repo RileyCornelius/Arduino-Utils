@@ -6,7 +6,7 @@
 // Example usage:
 // ----------------
 
-namespace player2
+namespace player
 {
 
     void playing() { log_d("Playing"); }

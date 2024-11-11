@@ -63,34 +63,34 @@ namespace fsm2
         void handle() { trigger(onHandle); }
     };
 
-    template <typename E, typename A>
+    template <typename Event, typename A>
     struct Transition
     {
         State stateFrom;
         State stateTo;
-        E event;
+        Event event;
         A action;
         std::function<bool()> guard = nullptr;
 
-        bool canTransit(State &state, E &evt)
+        bool canTransit(State &state, Event &evt)
         {
             return stateFrom == state && (!event || event == evt) && (!guard || guard());
         }
     };
 
-    template <typename E, typename A>
+    template <typename Event, typename A>
     class Fsm
     {
     private:
         State currentState;
-        Array<Transition<E, A>> transitions;
+        Array<Transition<Event, A>> transitions;
 
     public:
         template <size_t N>
-        constexpr Fsm(State initialState, Transition<E, A> (&transitionTable)[N])
+        constexpr Fsm(State initialState, Transition<Event, A> (&transitionTable)[N])
             : currentState(initialState), transitions(transitionTable) {}
 
-        A input(E event)
+        A input(Event event)
         {
             for (auto &transition : transitions)
             {
@@ -110,7 +110,7 @@ namespace fsm2
             return nullptr;
         }
 
-        void trigger(E event)
+        void trigger(Event event)
         {
             for (auto &transition : transitions)
             {

@@ -13,11 +13,11 @@ namespace player
     void stop() { log_d("Stop player"); }
     void pause() { log_d("Pause player"); }
 
-    template <typename S>
+    template <typename State>
     struct StateMap
     {
         const char *name;
-        S state;
+        State state;
         std::function<void()> func;
     };
 
@@ -29,11 +29,11 @@ namespace player
         std::function<void()> func;
     };
 
-    template <typename E>
+    template <typename Event>
     struct EventMap
     {
         const char *name;
-        E event;
+        Event event;
     };
 
     enum State

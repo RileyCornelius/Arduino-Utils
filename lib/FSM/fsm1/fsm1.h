@@ -41,34 +41,34 @@ public:
 
 namespace fsm1
 {
-    template <typename S, typename E, typename A>
+    template <typename State, typename Event, typename A>
     struct Transition
     {
-        S stateFrom;
-        S stateTo;
-        E event;
+        State stateFrom;
+        State stateTo;
+        Event event;
         Optional<A> action{};
         std::function<bool()> guard = nullptr;
 
-        bool canTransit(S &state, E &evt)
+        bool canTransit(State &state, Event &evt)
         {
             return stateFrom == state && (!event || event == evt) && (!guard || guard());
         }
     };
 
-    template <typename S, typename E, typename A>
+    template <typename State, typename Event, typename A>
     class Fsm
     {
     private:
-        S currentState;
-        Array<Transition<S, E, A>> transitions;
+        State currentState;
+        Array<Transition<State, Event, A>> transitions;
 
     public:
         template <size_t N>
-        constexpr Fsm(S initialState, Transition<S, E, A> (&transitionTable)[N])
+        constexpr Fsm(State initialState, Transition<State, Event, A> (&transitionTable)[N])
             : currentState(initialState), transitions(transitionTable) {}
 
-        Optional<A> input(E event)
+        Optional<A> input(Event event)
         {
             for (auto &transition : transitions)
             {
@@ -81,7 +81,7 @@ namespace fsm1
             return Optional<A>{};
         }
 
-        S getState()
+        State getState()
         {
             return currentState;
         }
