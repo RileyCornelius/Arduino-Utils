@@ -33,18 +33,8 @@ namespace fsm
         std::function<void()> onHandle = nullptr;
         std::function<void()> onExit = nullptr;
 
-        void _exec(std::function<void()> callback)
-        {
-            if (callback)
-                callback();
-        }
-
         bool operator!=(const State &other) const { return !(*this == other); }
         bool operator==(const State &other) const { return *this == other; }
-
-        void enter() { _exec(onEnter); }
-        void exit() { _exec(onExit); }
-        void handle() { _exec(onHandle); }
     };
 
     template <typename Event>
@@ -68,20 +58,22 @@ namespace fsm
         constexpr Fsm(State *initialState, Transition<Event> (&transitionTable)[N])
             : currentState(initialState), transitions(transitionTable) {}
 
+        void _call(std::function<void()> callback)
+        {
+            if (callback)
+                callback();
+        }
+
         bool trigger(Event event)
         {
             for (auto &transition : transitions)
             {
                 if (transition.stateFrom == currentState && transition.event == event)
                 {
-                    currentState->exit();
+                    _call(currentState->onExit);
                     currentState = transition.stateTo;
-                    currentState->enter();
-
-                    if (transition.action)
-                    {
-                        transition.action();
-                    }
+                    _call(currentState->onEnter);
+                    _call(transition.action);
                     return true;
                 }
             }
@@ -90,7 +82,7 @@ namespace fsm
 
         void handle()
         {
-            currentState->handle();
+            _call(currentState->onHandle);
         }
 
         State getState()

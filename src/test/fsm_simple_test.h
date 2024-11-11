@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <map>
 
-#include "fsm4/fsm4.h"
+#include "fsm_simple.h"
 
 // ----------------
 // Basic Example Usage:

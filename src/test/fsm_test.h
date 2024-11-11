@@ -1,22 +1,17 @@
 #include <Arduino.h>
-#include <map>
+
 #include "fsm.h"
 
 // ----------------
-// Example usage:
+// Example Usage:
 // ----------------
 
 namespace player
 {
-    // state handlers
     void playing() { log_d("Playing"); }
-    void idle() { log_d("Idle"); }
     void paused() { log_d("Paused"); }
-
-    // actions
-    void start() { log_d("Start player"); }
-    void stop() { log_d("Stop player"); }
-    void pause() { log_d("Pause player"); }
+    void idle() { log_d("Idle"); }
+    void start() { log_d("Start"); }
 
     enum Event
     {
@@ -27,42 +22,32 @@ namespace player
         MAX_EVENT_SIZE
     };
 
-    std::map<Event, const char *> eventNames = {
-        {PlayPressed, "PlayPressed"},
-        {PausePressed, "PausePressed"},
-        {StoppedPressed, "StoppedPressed"},
-    };
-
     fsm::State Playing = {.name = "Playing", .onHandle = playing};
     fsm::State Paused = {.name = "Paused", .onHandle = paused};
     fsm::State Idle = {.name = "Idle", .onHandle = idle};
 
-    fsm::Transition<Event> transitions[] = {
-        {.stateFrom = &Idle, .stateTo = &Playing, .event = PlayPressed, .action = start},
-        {.stateFrom = &Playing, .stateTo = &Paused, .event = PausePressed, .action = pause},
-        {.stateFrom = &Playing, .stateTo = &Idle, .event = StoppedPressed, .action = stop},
-        {.stateFrom = &Paused, .stateTo = &Playing, .event = PlayPressed, .action = start},
-        {.stateFrom = &Paused, .stateTo = &Idle, .event = StoppedPressed, .action = stop},
+    fsm::Fsm<Event> fsm = {
+        .currentState = &Idle,
+        .transitions = {
+            {.event = PlayPressed, .stateFrom = &Idle, .stateTo = &Playing, .action = start},
+            {.event = PausePressed, .stateFrom = &Playing, .stateTo = &Paused},
+            {.event = PlayPressed, .stateFrom = &Paused, .stateTo = &Playing},
+        },
+        .onTransition = [](Event &event, fsm::State &from, fsm::State &to)
+        {
+            log_d("Event: %d - State: %d => %d", event, from, to);
+        },
     };
-
-    fsm::Fsm<Event> fsm(&Idle, transitions);
 
     void trigger(Event event)
     {
-        fsm::State prevState = fsm.getState();
-        bool stateChanged = fsm.trigger(event);
-        if (!stateChanged)
-        {
-            log_w("State [%s] did not change", fsm.getState().name, eventNames[event]);
-        }
-        log_i("Event: [%s] - State: [%s] => [%s]", eventNames[event], prevState.name, fsm.getState().name);
+        fsm.trigger(event);
     }
 
     void run()
     {
         fsm.handle();
     }
-
 };
 
 // -----------------------------------
@@ -75,12 +60,11 @@ void fsm_setup_test()
 
 void fsm_loop_test()
 {
-    if (random(2))
-    {
-        player::Event event = static_cast<player::Event>(random(3));
-        player::trigger(event);
-    }
+    using namespace player;
 
-    player::run();
+    Event event = static_cast<Event>(random(MAX_EVENT_SIZE));
+    trigger(event);
+
+    run();
     delay(1000);
 }

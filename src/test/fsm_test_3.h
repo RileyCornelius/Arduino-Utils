@@ -34,6 +34,10 @@ namespace player
             {.event = PausePressed, .stateFrom = &Playing, .stateTo = &Paused},
             {.event = PlayPressed, .stateFrom = &Paused, .stateTo = &Playing},
         },
+        .onTransition = [](Event &event, fsm::State &from, fsm::State &to)
+        {
+            log_d("Event: %d - State: %d => %d", event, from, to);
+        },
     };
 
     void trigger(Event event)

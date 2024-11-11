@@ -17,7 +17,7 @@ namespace fsm
 
         State currentState;
         std::vector<Transition> transitions;
-        std::function<void(const Event &, const State &, const State &)> transit = nullptr;
+        std::function<void(const Event &event, const State &from, const State &to)> onTransition = nullptr;
 
         bool trigger(Event event)
         {
@@ -30,8 +30,8 @@ namespace fsm
                     if (transition.action)
                         transition.action();
 
-                    if (transit)
-                        transit(event, transition.stateFrom, transition.stateTo);
+                    if (onTransition)
+                        onTransition(event, transition.stateFrom, transition.stateTo);
 
                     return true;
                 }
