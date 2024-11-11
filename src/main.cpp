@@ -324,7 +324,7 @@ void playerInitTransitions()
 
 // #include "simple_fsm.h"
 // #include "fsm.h"
-#include "fsm3/fsm3_example.h"
+#include "fsm_example.h"
 
 void setup()
 {
@@ -335,7 +335,7 @@ void setup()
 
 void loop()
 {
-  player3::test();
+  player::test();
 
   // delay(1000);
 

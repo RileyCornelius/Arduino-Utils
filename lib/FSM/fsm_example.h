@@ -1,50 +1,34 @@
 #pragma once
 
+#include <map>
 #include "fsm.h"
+
+// ----------------
+// Example usage:
+// ----------------
 
 namespace player
 {
+    // state handlers
     void playing() { log_d("Playing"); }
     void idle() { log_d("Idle"); }
     void paused() { log_d("Paused"); }
-    void stopped() { log_d("Stopped"); }
 
+    // actions
     void start() { log_d("Start player"); }
     void stop() { log_d("Stop player"); }
     void pause() { log_d("Pause player"); }
 
-    template <typename S>
-    struct StateMap
+    // guards
+    bool randomLag()
     {
-        const char *name;
-        S state;
-        std::function<void()> func;
-    };
-
-    template <typename A>
-    struct ActionMap
-    {
-        const char *name;
-        A action;
-        std::function<void()> func;
-    };
-
-    template <typename E>
-    struct EventMap
-    {
-        const char *name;
-        E event;
-    };
-
-    enum State
-    {
-        Idle,
-        Playing,
-        Paused,
-        Stopped,
-
-        MAX_STATE_SIZE
-    };
+        auto num = random(2);
+        if (num >= 1)
+        {
+            log_w("Guarded");
+        }
+        return num;
+    }
 
     enum Event
     {
@@ -55,68 +39,49 @@ namespace player
         MAX_EVENT_SIZE
     };
 
-    enum Action
-    {
-        Start,
-        Stop,
-        Pause,
-
-        MAX_ACTION_SIZE
+    std::map<Event, const char *> eventNames = {
+        {PlayPressed, "PlayPressed"},
+        {PausePressed, "PausePressed"},
+        {StoppedPressed, "StoppedPressed"},
     };
 
-    ActionMap<Action> actions[] = {
-        {.name = "Start", .action = Start, .func = start},
-        {.name = "Stop", .action = Stop, .func = stop},
-        {.name = "Pause", .action = Pause, .func = pause},
+    fsm::State Playing = {.name = "Playing", .onHandle = playing};
+    fsm::State Paused = {.name = "Paused", .onHandle = paused};
+    fsm::State Idle = {.name = "Idle", .onHandle = idle};
+
+    fsm::Transition<Event> transitions[] = {
+        {.stateFrom = &Idle, .stateTo = &Playing, .event = PlayPressed, .action = start, .guard = randomLag},
+        {.stateFrom = &Playing, .stateTo = &Paused, .event = PausePressed, .action = pause},
+        {.stateFrom = &Playing, .stateTo = &Idle, .event = StoppedPressed, .action = stop},
+        {.stateFrom = &Paused, .stateTo = &Playing, .event = PlayPressed, .action = start},
+        {.stateFrom = &Paused, .stateTo = &Idle, .event = StoppedPressed, .action = stop},
     };
 
-    StateMap<State> states[] = {
-        {.name = "Idle", .state = Idle, .func = idle},
-        {.name = "Playing", .state = Playing, .func = playing},
-        {.name = "Paused", .state = Paused, .func = paused},
-        {.name = "Stopped", .state = Stopped, .func = stopped},
-    };
-
-    EventMap<Event> events[] = {
-        {.name = "PlayPressed", .event = PlayPressed},
-        {.name = "PausePressed", .event = PausePressed},
-        {.name = "StoppedPressed", .event = StoppedPressed},
-    };
-
-    fsm::Transition<State, Event, Action> transitions[] = {
-        {.stateFrom = Idle, .stateTo = Playing, .event = PlayPressed, .action = Start},
-        {.stateFrom = Playing, .stateTo = Paused, .event = PausePressed, .action = Pause},
-        {.stateFrom = Playing, .stateTo = Idle, .event = StoppedPressed, .action = Stop},
-        {.stateFrom = Paused, .stateTo = Playing, .event = PlayPressed, .action = Start},
-        {.stateFrom = Paused, .stateTo = Idle, .event = StoppedPressed, .action = Stop},
-    };
-
-    auto fsm = fsm::Fsm<State, Event, Action>(Idle, transitions);
+    auto fsm = fsm::Fsm<Event>(&Idle, transitions);
 
     void trigger(Event event)
     {
-        Optional<Action> action = fsm.input(event);
-        if (!action.hasValue)
-        {
-            log_d("No action for event [%s] in state [%s]", events[event].name, states[fsm.getState()].name);
-            return;
-        }
+        log_i("Triggered event [%s]", eventNames[event]);
 
-        auto actionFunc = actions[action.value].func;
-        actionFunc();
+        bool stateChanged = fsm.trigger(event);
+        if (!stateChanged)
+        {
+            log_w("Event [%s] can not be triggered in state [%s]", eventNames[event], fsm.getState().name);
+        }
     }
 
     void run()
     {
-        State state = fsm.getState();
-        auto stateFunc = states[state].func;
-        stateFunc();
+        fsm.handle();
     }
 
     void test()
     {
-        Event event = static_cast<Event>(random(MAX_EVENT_SIZE));
-        trigger(event);
+        if (random(2))
+        {
+            Event event = static_cast<Event>(random(3));
+            trigger(event);
+        }
 
         run();
         delay(1000);

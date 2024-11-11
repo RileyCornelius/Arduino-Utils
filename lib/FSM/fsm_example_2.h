@@ -1,13 +1,12 @@
 #pragma once
 
-#include "fsm3/fsm3.h"
+#include "fsm/fsm.h"
 
 // ----------------
 // Example usage:
 // ----------------
-using namespace fsm3;
 
-namespace player3
+namespace player
 {
     // state handlers
     void playing() { log_d("Playing"); }
@@ -23,11 +22,11 @@ namespace player3
         MAX_EVENT_SIZE
     };
 
-    State Playing = {.onHandle = playing};
-    State Paused = {.onHandle = paused};
-    State Idle = {.onHandle = idle};
+    fsm::State Playing = {.onHandle = playing};
+    fsm::State Paused = {.onHandle = paused};
+    fsm::State Idle = {.onHandle = idle};
 
-    fsm3::Transition<Event> transitions[] = {
+    fsm::Transition<Event> transitions[] = {
         {.stateFrom = &Idle, .stateTo = &Playing, .event = PlayPressed},
         {.stateFrom = &Playing, .stateTo = &Paused, .event = PausePressed},
         {.stateFrom = &Playing, .stateTo = &Idle, .event = StoppedPressed},
@@ -35,7 +34,7 @@ namespace player3
         {.stateFrom = &Paused, .stateTo = &Idle, .event = StoppedPressed},
     };
 
-    auto fsm = fsm3::Fsm<Event>(&Idle, transitions);
+    auto fsm = fsm::Fsm<Event>(&Idle, transitions);
 
     void trigger(Event event)
     {

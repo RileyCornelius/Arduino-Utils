@@ -5,7 +5,6 @@
 // ----------------
 // Example usage:
 // ----------------
-using namespace fsm2;
 
 namespace player2
 {
@@ -24,11 +23,11 @@ namespace player2
     using Action = std::function<void()>;
     using Event = const char *;
 
-    State Playing = {.name = "Playing", .onHandle = playing};
-    State Paused = {.name = "Paused", .onHandle = paused};
-    State Idle = {.name = "Idle", .onHandle = idle};
-    State Stopped = {.name = "Stopped", .onHandle = stopped};
-    State Loading = {.name = "Loading", .onHandle = loading};
+    fsm2::State Playing = {.name = "Playing", .onHandle = playing};
+    fsm2::State Paused = {.name = "Paused", .onHandle = paused};
+    fsm2::State Idle = {.name = "Idle", .onHandle = idle};
+    fsm2::State Stopped = {.name = "Stopped", .onHandle = stopped};
+    fsm2::State Loading = {.name = "Loading", .onHandle = loading};
 
     Event PlayPressed = "PlayPressed";
     Event PausePressed = "PausePressed";
@@ -61,7 +60,7 @@ namespace player2
 
     void run()
     {
-        State state = fsm.getState();
+        fsm2::State state = fsm.getState();
         state.handle();
     }
 
