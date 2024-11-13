@@ -15,7 +15,9 @@
 
 #define LOG_USE_TIME 0
 
-#define LOG_USE_TAG_SHORT 1
+#define LOG_USE_TAG_SHORT 0
+
+#define LOG_USE_COLORS 1
 
 #define LOG_OUTPUT Serial
 

@@ -55,7 +55,7 @@ inline Print &operator<<(Print &obj, T arg)
 
 // Log colors
 #ifndef LOG_USE_COLORS
-#define LOG_USE_COLORS 1
+#define LOG_USE_COLORS 0
 #endif
 
 #if LOG_USE_COLORS
@@ -81,12 +81,12 @@ inline Print &operator<<(Print &obj, T arg)
 #define ARDUHAL_LOG_COLOR_PRINT(letter) log_printf(ARDUHAL_LOG_COLOR_##letter)
 #define ARDUHAL_LOG_COLOR_PRINT_END log_printf(ARDUHAL_LOG_RESET_COLOR)
 #else
-#define ARDUHAL_LOG_COLOR_E
-#define ARDUHAL_LOG_COLOR_W
-#define ARDUHAL_LOG_COLOR_I
-#define ARDUHAL_LOG_COLOR_D
-#define ARDUHAL_LOG_COLOR_V
-#define ARDUHAL_LOG_RESET_COLOR
+#define ARDUHAL_LOG_COLOR_E ""
+#define ARDUHAL_LOG_COLOR_W ""
+#define ARDUHAL_LOG_COLOR_I ""
+#define ARDUHAL_LOG_COLOR_D ""
+#define ARDUHAL_LOG_COLOR_V ""
+#define ARDUHAL_LOG_RESET_COLOR ""
 #define ARDUHAL_LOG_COLOR_PRINT(letter)
 #define ARDUHAL_LOG_COLOR_PRINT_END
 #endif
@@ -111,7 +111,7 @@ void format_time_hms()
     seconds = ms / 1000;
     minutes = seconds / 60;
     hours = minutes / 60;
-    sprintf(__log_time_format_buff, "[%02u:%02u:%02u:%03u]", hours % 24, minutes % 60, seconds % 60, ms % 1000);
+    sprintf(__log_time_format_buff, "[%02u:%02u:%02u:%03u] ", hours % 24, minutes % 60, seconds % 60, ms % 1000);
 #endif
 }
 
@@ -121,21 +121,17 @@ bool can_log(const char *tag)
     return LOG_FILTER ? in_filter : !in_filter; // INCLUDE or EXCLUDE
 }
 
-#define LOG_PRINT_COLOR(letter) LOG_OUTPUT << ARDUHAL_LOG_COLOR_##letter
-#define LOG_PRINT_COLOR_END() LOG_OUTPUT << ARDUHAL_LOG_RESET_COLOR
-#define LOG_PRINT(message) LOG_OUTPUT << message
-
-#define LOG_WRITE(letter, loglevel, message)                                                                                                                       \
-    format_time_hms();                                                                                                                                             \
-    LOG_OUTPUT << ARDUHAL_LOG_COLOR_##letter << __log_time_format_buff << " " << __log_levels_text[loglevel] << " " << message << ARDUHAL_LOG_RESET_COLOR << endl; \
+#define LOG_WRITE(letter, loglevel, message)                                                                                                                \
+    format_time_hms();                                                                                                                                      \
+    LOG_OUTPUT << ARDUHAL_LOG_COLOR_##letter << __log_time_format_buff << __log_levels_text[loglevel] << " " << message << ARDUHAL_LOG_RESET_COLOR << endl; \
     LOG_OUTPUT.flush();
 
-#define LOG_WRITE_TAG(letter, loglevel, tag, message)                                                                                                                                  \
-    if (can_log(tag))                                                                                                                                                                  \
-    {                                                                                                                                                                                  \
-        format_time_hms();                                                                                                                                                             \
-        LOG_OUTPUT << ARDUHAL_LOG_COLOR_##letter << __log_time_format_buff << " " << __log_levels_text[loglevel] << " [" << tag << "] " << message << ARDUHAL_LOG_RESET_COLOR << endl; \
-        LOG_OUTPUT.flush();                                                                                                                                                            \
+#define LOG_WRITE_TAG(letter, loglevel, tag, message)                                                                                                                           \
+    if (can_log(tag))                                                                                                                                                           \
+    {                                                                                                                                                                           \
+        format_time_hms();                                                                                                                                                      \
+        LOG_OUTPUT << ARDUHAL_LOG_COLOR_##letter << __log_time_format_buff << __log_levels_text[loglevel] << " [" << tag << "] " << message << ARDUHAL_LOG_RESET_COLOR << endl; \
+        LOG_OUTPUT.flush();                                                                                                                                                     \
     }
 
 #endif // if LOG_LEVEL > LOG_LEVEL_NONE

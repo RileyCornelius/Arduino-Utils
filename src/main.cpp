@@ -325,11 +325,41 @@ void setup()
 void loop()
 {
 
+  BENCHMARK_MICROS_BEGIN();
+  Serial.println("Sers");
+  Serial.flush();
+  BENCHMARK_MICROS_END("Serial execution time: ");
+
+  BENCHMARK_MICROS_BEGIN();
   LOG_VERBOSE(LOG_TAG, "Verbose");
+  BENCHMARK_MICROS_END("LOG_VERBOSE execution time: ");
+
   LOG_DEBUG(LOG_TAG, "Debug");
+
+  BENCHMARK_MICROS_BEGIN();
   LOG_INFO(LOG_TAG, "Info");
+  BENCHMARK_MICROS_END("LOG_INFO execution time: ");
+
   LOG_WARNING(LOG_TAG, "Warning");
+
+  BENCHMARK_MICROS_BEGIN();
   LOG_ERROR(LOG_TAG, "Error");
+  BENCHMARK_MICROS_END("LOG_ERROR execution time: ");
+
+  BENCHMARK_MICROS_BEGIN();
+  Serial.println("Serial3");
+  Serial.flush();
+  BENCHMARK_MICROS_END("Serial3 execution time: ");
+
+  BENCHMARK_MICROS_BEGIN();
+  log_i("Info");
+  BENCHMARK_MICROS_END("log_i execution time: ");
+
+  // etl::span<value_type> callback_parameter_type;
+  BENCHMARK_MICROS_BEGIN();
+  ESP_LOGI("gd", "Info");
+  BENCHMARK_MICROS_END("ESP execution time: ");
+
   delay(1000);
   // fsm_loop_test();
   // log_i("loop: %d", x++);
