@@ -13,13 +13,11 @@
 #include <StopWatch.h>
 // #include <FSM.h>
 #include <iostream>
-
-#define LOG_LOCAL_LEVEL LOG_LEVEL_DEBUG
-#include <Logger2.h>
+#include <log.h>
 
 // #include <fmt/core.h>
 
-static const char *LOG_TAG = "[Main]";
+static const char *LOG_TAG = "Main";
 
 // CTime ntpTime;
 
@@ -72,14 +70,6 @@ void CircularLinkedListTest()
   }
 
   Serial.println("-----------");
-}
-
-void loggerTest()
-{
-  LOG_DEBUG(LOG_TAG, "1");
-  LOG_INFO(LOG_TAG, "2 %d %d", 222, 333);
-  LOG_WARN(LOG_TAG, String("3 ") + "333");
-  LOG_ERROR(LOG_TAG, "4");
 }
 
 void benchmarkTest()
@@ -334,11 +324,15 @@ void setup()
 
 void loop()
 {
-  LOG_INFO(LOG_TAG, "loop: %d", x++);
-  LOG_INFO(LOG_TAG, "Loglevel=");
+
+  LOG_VERBOSE(LOG_TAG, "Verbose");
+  LOG_DEBUG(LOG_TAG, "Debug");
+  LOG_INFO(LOG_TAG, "Info");
+  LOG_WARNING(LOG_TAG, "Warning");
+  LOG_ERROR(LOG_TAG, "Error");
   delay(1000);
   // fsm_loop_test();
-  log_i("loop: %d", x++);
+  // log_i("loop: %d", x++);
 
   // delay(1000);
 
