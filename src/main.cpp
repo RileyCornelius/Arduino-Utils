@@ -5,7 +5,6 @@
 #include <Types.h>
 #include <LinkedList.h>
 #include <Benchmark.h>
-#include <Logger.h>
 #include <CSV.h>
 #include <CTime.h>
 #include <Button.h>
@@ -14,6 +13,9 @@
 #include <StopWatch.h>
 // #include <FSM.h>
 #include <iostream>
+
+#define LOG_LOCAL_LEVEL LOG_LEVEL_DEBUG
+#include <Logger2.h>
 
 // #include <fmt/core.h>
 
@@ -322,7 +324,7 @@ void playerInitTransitions()
   // playerFSM.addEventTransition(Paused, Idle, STOP);
 }
 
-#include "test/fsm_test.h"
+// #include "test/fsm_test.h"
 // #include "test/fsm_simple_test.h"
 
 void setup()
@@ -332,7 +334,11 @@ void setup()
 
 void loop()
 {
-  fsm_loop_test();
+  LOG_INFO(LOG_TAG, "loop: %d", x++);
+  LOG_INFO(LOG_TAG, "Loglevel=");
+  delay(1000);
+  // fsm_loop_test();
+  log_i("loop: %d", x++);
 
   // delay(1000);
 

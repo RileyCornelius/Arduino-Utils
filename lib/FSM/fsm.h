@@ -28,7 +28,7 @@ namespace fsm
 
         State *currentState;
         std::vector<Transition> transitions;
-        std::function<void(Event &event, State &from, State &to)> onTransition = nullptr;
+        std::function<void(const Event &event, const State &from, const State &to)> onTransition = nullptr;
 
         void _call(std::function<void()> callback)
         {
@@ -36,7 +36,7 @@ namespace fsm
                 callback();
         }
 
-        bool trigger(Event event)
+        bool trigger(const Event &event)
         {
             for (auto &transition : transitions)
             {

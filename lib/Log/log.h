@@ -1,0 +1,22 @@
+/*
+   LOG_LEVEL_NONE,
+   LOG_LEVEL_ERROR,
+   LOG_LEVEL_WARNING,
+   LOG_LEVEL_NOTICE,
+   LOG_LEVEL_INFO,
+   LOG_LEVEL_DEBUG
+*/
+
+#define LOG_LEVEL LOG_LEVEL_DEBUG
+
+#define LOG_FILTER LOG_FILTER_EXCLUDE
+
+#define LOG_FILTER_LIST ""
+
+#define LOG_USE_TIME 0
+
+#define LOG_USE_TAG_SHORT 1
+
+#define LOG_OUTPUT Serial
+
+#include <logger.h>
