@@ -12,8 +12,8 @@
 #include <SimpleButton.h>
 #include <Stopwatch.h>
 // #include <FSM.h>
-#include <iostream>
-#include <log.h>
+// #include <iostream>
+// #include <log.h>
 
 // #include <fmt/core.h>
 
@@ -137,7 +137,7 @@ void csvTest()
   columnIndex = 0;
   rowIndex = 2;
   Csv.getDataAtColumnRow(dataAt, columnIndex, rowIndex);
-  Serial.printf("data: %s at column: %d, row: %d", dataAt.c_str(), columnIndex, rowIndex);
+  // Serial.printf("data: %s at column: %d, row: %d", dataAt.c_str(), columnIndex, rowIndex);
 }
 
 void buttonTest()
@@ -231,7 +231,7 @@ void stopWatchTest()
 
   if (timer.ready())
   {
-    Serial.println(stopwatch.getTime() / 1000);
+    // Serial.println(stopwatch.getTime() / 1000);
   }
 }
 
@@ -325,7 +325,7 @@ void setup()
 
 void loop()
 {
-  LOG_I("std" << 1.00);
+  // LOG_I("std" << 1.00);
 
   // BENCHMARK_MICROS_BEGIN();
   // LOG_VERBOSE(LOG_TAG, "Verbose");
@@ -335,11 +335,11 @@ void loop()
   // LOG_INFO(LOG_TAG, "Info");
   // BENCHMARK_MICROS_END("LOG_INFO execution time: ");
 
-  LOG_DEBUG(LOG_TAG, "Debug");
-  LOG_WARNING("LOG", "TEST got %d", 1);
+  // LOG_DEBUG(LOG_TAG, "Debug");
+  // LOG_WARNING("LOG", "TEST got %d", 1);
 
-  LOG_E("Error %s", "error");
-  LOG_W("Warning %d", 1);
+  // LOG_E("Error %s", "error");
+  // LOG_W("Warning %d", 1);
 
   // BENCHMARK_MICROS_BEGIN();
   // Serial.println("Serial3");
@@ -355,7 +355,7 @@ void loop()
   // ESP_LOGI("gd", "Info");
   // BENCHMARK_MICROS_END("ESP execution time: ");
 
-  delay(1000);
+  // delay(1000);
 
   // fsm_loop_test();
   // log_i("loop: %d", x++);

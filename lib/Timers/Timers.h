@@ -201,7 +201,9 @@ public:
     NAME.ready();
 
 // Join two symbols together
+#ifndef CONCAT
 #define CONCAT(x, y) I_CONCAT(x, y)
 #define I_CONCAT(x, y) x##y
+#endif
 
 #endif
