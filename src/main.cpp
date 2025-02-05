@@ -10,7 +10,7 @@
 #include <Button.h>
 #include <CallbackButton.h>
 #include <SimpleButton.h>
-#include <StopWatch.h>
+#include <Stopwatch.h>
 // #include <FSM.h>
 #include <iostream>
 #include <log.h>
@@ -204,34 +204,34 @@ void buttonCallbacks()
 
 void stopWatchTest()
 {
-  static StopWatch stopWatch;
+  static Stopwatch stopwatch;
   static Timer timer(1000);
   static SimpleButton button(2);
   static SimpleButton button2(3);
 
   if (button.pressed())
   {
-    if (stopWatch.isRunning())
+    if (stopwatch.isRunning())
     {
       Serial.println("stop");
-      stopWatch.stop();
+      stopwatch.stop();
     }
     else
     {
       Serial.println("start");
-      stopWatch.start();
+      stopwatch.start();
     }
   }
 
-  if (stopWatch.getTime() > 5000)
+  if (stopwatch.getTime() > 5000)
   {
     Serial.println("reset");
-    stopWatch.reset();
+    stopwatch.reset();
   }
 
   if (timer.ready())
   {
-    Serial.println(stopWatch.getTime() / 1000);
+    Serial.println(stopwatch.getTime() / 1000);
   }
 }
 
@@ -325,6 +325,7 @@ void setup()
 
 void loop()
 {
+  LOG_I("std" << 1.00);
 
   // BENCHMARK_MICROS_BEGIN();
   // LOG_VERBOSE(LOG_TAG, "Verbose");

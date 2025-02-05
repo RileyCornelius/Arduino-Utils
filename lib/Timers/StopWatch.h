@@ -2,30 +2,42 @@
 
 #include <Arduino.h>
 
-class StopWatch
+class Stopwatch
 {
 private:
     uint32_t startTime = 0;
-    uint32_t duration = 0;
+    uint64_t duration = 0;
     bool running = false;
 
 public:
-    void start()
+    bool start()
     {
         if (running)
-            return;
+            return false;
 
         startTime = millis();
         running = true;
+        return true;
     }
 
-    void stop()
+    bool pause()
     {
         if (!running)
-            return;
+            return false;
 
         duration += millis() - startTime;
         running = false;
+        return true;
+    }
+
+    bool stop()
+    {
+        if (!running)
+            return false;
+
+        duration = 0;
+        running = false;
+        return true;
     }
 
     void reset()
@@ -34,12 +46,15 @@ public:
         duration = 0;
     }
 
-    uint32_t getTime()
+    uint64_t getTime()
     {
         if (running)
-            return millis() - startTime + duration;
-        else
-            return duration;
+        {
+            uint32_t currentTime = millis();
+            duration += currentTime - startTime;
+            startTime = currentTime;
+        }
+        return duration;
     }
 
     bool isRunning()
