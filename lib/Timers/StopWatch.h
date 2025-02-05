@@ -9,13 +9,15 @@ private:
     uint64_t duration = 0;
     bool running = false;
 
+    virtual uint32_t now() { return millis(); }
+
 public:
     bool start()
     {
         if (running)
             return false;
 
-        startTime = millis();
+        startTime = now();
         running = true;
         return true;
     }
@@ -25,7 +27,7 @@ public:
         if (!running)
             return false;
 
-        duration += millis() - startTime;
+        duration += now() - startTime;
         running = false;
         return true;
     }
@@ -42,7 +44,7 @@ public:
 
     void reset()
     {
-        startTime = millis();
+        startTime = now();
         duration = 0;
     }
 
@@ -50,7 +52,7 @@ public:
     {
         if (running)
         {
-            uint32_t currentTime = millis();
+            uint32_t currentTime = now();
             duration += currentTime - startTime;
             startTime = currentTime;
         }
@@ -61,4 +63,10 @@ public:
     {
         return running;
     }
+};
+
+class StopwatchMicros : public Stopwatch
+{
+private:
+    uint32_t now() override { return micros(); }
 };
