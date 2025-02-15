@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-template <typename PinType>
+template <typename PinType = uint8_t>
 class DigitalOutput
 {
 private:
