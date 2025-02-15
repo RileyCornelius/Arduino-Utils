@@ -5,7 +5,7 @@
 namespace fsm
 {
     template <typename State = uint8_t, typename Event = uint8_t>
-    struct Fsm
+    struct SimpleFsm
     {
         struct Transition
         {
