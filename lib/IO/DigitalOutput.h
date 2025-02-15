@@ -2,31 +2,28 @@
 
 #include <Arduino.h>
 
+template <typename PinType>
 class DigitalOutput
 {
 private:
     uint8_t pin;
 
 public:
-    DigitalOutput(){};
-    DigitalOutput(uint8_t pinNumber) { init(pinNumber); }
+    DigitalOutput() {};
+    DigitalOutput(PinType pinNumber, uint8_t mode = OUTPUT) { init(pinNumber, mode); }
 
-    void init(uint8_t pinNumber)
+    /// @brief Initializes the digital output pin
+    /// @param pinNumber The pin number to use
+    /// @param mode The mode for the pin (OUTPUT, PULLUP, PULLDOWN) default is OUTPUT
+    void init(PinType pinNumber, uint8_t mode = OUTPUT)
     {
-        pin = pinNumber;
-        pinMode(pin, OUTPUT);
+        pin = (uint8_t)pinNumber;
+        pinMode(pin, mode);
     }
 
     bool isOn() { return digitalRead(pin); }
-
     void on() { digitalWrite(pin, HIGH); }
-
     void off() { digitalWrite(pin, LOW); }
-
+    void set(bool value) { digitalWrite(pin, value); }
     void toggle() { digitalWrite(pin, !digitalRead(pin)); }
-
-    /**
-     * \param scale Duty cycle of the pulse width modulation with a scale of 0-255
-     */
-    void pwm(uint8_t scale) { analogWrite(pin, scale); }
 };

@@ -44,8 +44,8 @@ public:
 
     void reset()
     {
-        startTime = now();
         duration = 0;
+        startTime = now();
     }
 
     uint64_t getTime()

@@ -74,19 +74,19 @@ void CircularLinkedListTest()
 
 void benchmarkTest()
 {
-  BENCHMARK_BEGIN();
-  for (size_t i = 0; i < 100; i++)
-  {
-    analogRead(0);
-  }
-  BENCHMARK_END("100 analogReads: ");
+  // BENCHMARK_BEGIN();
+  // for (size_t i = 0; i < 100; i++)
+  // {
+  //   analogRead(0);
+  // }
+  // BENCHMARK_END("100 analogReads: ");
 
-  BENCHMARK_MICROS_BEGIN();
-  for (size_t i = 0; i < 100; i++)
-  {
-    analogRead(0);
-  }
-  BENCHMARK_MICROS_END("100 analogReads: ");
+  // BENCHMARK_MICROS_BEGIN();
+  // for (size_t i = 0; i < 100; i++)
+  // {
+  //   analogRead(0);
+  // }
+  // BENCHMARK_MICROS_END("100 analogReads: ");
 }
 
 void csvTest()
