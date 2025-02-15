@@ -4,7 +4,7 @@ template <typename State>
 class SimpleStateMachine
 {
 private:
-    State currentState;
+    volatile State currentState;
     void (*onTransition)(State from, State to);
 
 public:
