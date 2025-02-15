@@ -16,7 +16,7 @@ public:
     Timer()
     {
         reset();
-        period = 1;
+        setPeriod(period);
     }
     Timer(uint32_t period)
     {
@@ -30,17 +30,17 @@ public:
     uint32_t getRemaining() { return period - getElapsed(); }
     void setPeriod(uint32_t period) { this->period = period; }
     void reset() { lastTrigger = getTime(); }
-    bool ready()
+    bool isReady()
     {
-        bool isReady = (getElapsed() >= period);
-        if (isReady)
+        bool ready = (getElapsed() >= period);
+        if (ready)
         {
             reset();
         }
-        return isReady;
+        return ready;
     }
 
-    operator bool() { return ready(); }
+    operator bool() { return isReady(); }
 };
 
 /**--------------------------------------------------------------------------------------
@@ -70,7 +70,7 @@ public:
 #define EVERY_N_MILLIS(n) I_EVERY_N_MILLIS(CONCAT(_timer_, __COUNTER__), n)
 #define I_EVERY_N_MILLIS(name, n) \
     static Timer name = Timer(n); \
-    if (name.ready())
+    if (name.isReady())
 
 // EVERY_N_MICROS(1000)
 // {
@@ -79,7 +79,7 @@ public:
 #define EVERY_N_MICROS(n) I_EVERY_N_MICROS(CONCAT(_timer_, __COUNTER__), n)
 #define I_EVERY_N_MICROS(name, n)             \
     static TimerMicros name = TimerMicros(n); \
-    if (name.ready())
+    if (name.isReady())
 
 // Join two symbols together
 #define CONCAT(x, y) I_CONCAT(x, y)

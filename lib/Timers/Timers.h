@@ -30,7 +30,7 @@ public:
     uint32_t getRemaining() { return period - getElapsed(); }
     void setPeriod(uint32_t period) { period = period; }
     void reset() { lastTrigger = getTime(); }
-    virtual bool ready()
+    virtual bool isReady()
     {
         bool isReady = (getElapsed() >= period);
         if (isReady)
@@ -40,7 +40,7 @@ public:
         return isReady;
     }
 
-    operator bool() { return ready(); }
+    operator bool() { return isReady(); }
 };
 
 class AbstractCallbackTimer : public AbstractTimer
@@ -60,7 +60,7 @@ public:
     }
 
     void setCallback(func_t funcCallback) { _pFuncCallback = funcCallback; }
-    bool ready() override
+    bool isReady() override
     {
         bool isReady = (getElapsed() >= period);
         if (isReady)
@@ -182,7 +182,7 @@ public:
 #define EVERY_N_MILLIS_FUNC(N, FUNC) I_EVERY_N_MILLIS_FUNC(CONCAT(__func_timer, __COUNTER__), N, FUNC)
 #define I_EVERY_N_MILLIS_FUNC(NAME, N, FUNC)                        \
     static TimerCallbackMillis NAME = TimerCallbackMillis(N, FUNC); \
-    NAME.ready();
+    NAME.isReady();
 
 // EVERY_N_MICROS(1000)
 // {
@@ -198,7 +198,7 @@ public:
 #define EVERY_N_MICROS_FUNC(N, FUNC) I_EVERY_N_MICROS_FUNC(CONCAT(__func_timer, __COUNTER__), N, FUNC)
 #define I_EVERY_N_MICROS_FUNC(NAME, N, FUNC)                        \
     static TimerCallbackMicros NAME = TimerCallbackMicros(N, FUNC); \
-    NAME.ready();
+    NAME.isReady();
 
 // Join two symbols together
 #ifndef CONCAT

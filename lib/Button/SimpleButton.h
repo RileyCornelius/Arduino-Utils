@@ -38,7 +38,7 @@ public:
     }
 
     /**
-     * \return True only once when the button is pressed
+     * \return True only once when the button is pressed after the debounce delay
      */
     bool pressed()
     {
