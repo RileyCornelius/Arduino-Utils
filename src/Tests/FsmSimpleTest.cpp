@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <map>
 
-#include "fsm_simple.h"
+#include "FsmSimple.h"
 
 // ----------------
 // Basic Example Usage:
@@ -27,7 +27,7 @@ namespace player
         Idle,
     };
 
-    fsm::Fsm<State, Event> fsm = {
+    fsm::FsmSimple<State, Event> fsm = {
         .currentState = Idle,
         .transitions = {
             {.event = PlayPressed, .stateFrom = Idle, .stateTo = Playing, .action = playing},
@@ -63,7 +63,7 @@ namespace player2
     State Paused = "Paused";
     State Idle = "Idle";
 
-    fsm::Fsm<State, Event> fsm = {
+    fsm::FsmSimple<State, Event> fsm = {
         .currentState = Idle,
         .transitions = {
             {.event = PlayPressed, .stateFrom = Idle, .stateTo = Playing, .action = playing},
@@ -86,11 +86,11 @@ namespace player2
 //  TEST CODE
 // -----------------------------------
 
-void fsm_setup_test()
+void fsmSimpleSetup()
 {
 }
 
-void fsm_loop_test()
+void fsmSimpleLoop()
 {
     player::Event event = static_cast<player::Event>(random(3));
     player::trigger(event);

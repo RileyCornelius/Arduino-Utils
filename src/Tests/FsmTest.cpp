@@ -1,13 +1,13 @@
 #include <Arduino.h>
 #include <map>
 
-#include "fsm.h"
+#include "Fsm.h"
 
 // ----------------
 // Example Usage:
 // ----------------
 
-namespace player
+namespace player3
 {
     void playing() { log_d("Playing"); }
     void paused() { log_d("Paused"); }
@@ -40,7 +40,7 @@ namespace player
             {.event = PausePressed, .stateFrom = &Playing, .stateTo = &Paused},
             {.event = PlayPressed, .stateFrom = &Paused, .stateTo = &Playing},
         },
-        .onTransition = [](Event &event, fsm::State &from, fsm::State &to)
+        .onTransition = [](const Event &event, const fsm::State &from, const fsm::State &to)
         {
             log_i("Event: %s - State: %s => %s", eventNames[event], from.name, to.name);
         },
@@ -65,13 +65,13 @@ namespace player
 //  TEST CODE
 // -----------------------------------
 
-void fsm_setup_test()
+void fsmSetup()
 {
 }
 
-void fsm_loop_test()
+void fsmLoop()
 {
-    using namespace player;
+    using namespace player3;
 
     Event event = static_cast<Event>(random(MAX_EVENT_SIZE));
     trigger(event);
