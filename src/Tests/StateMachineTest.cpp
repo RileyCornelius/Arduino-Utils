@@ -1,7 +1,7 @@
 #include <Arduino.h>
 #include <SimpleButton.h>
 #include <StateMachine.h>
-#include <FSM2.h>
+#include <StateMachine2.h>
 
 void ledOn();
 void ledOff();

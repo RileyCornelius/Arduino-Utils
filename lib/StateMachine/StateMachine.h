@@ -8,12 +8,9 @@
 #define NO_HANDLE nullptr
 #define NO_EXIT nullptr
 
-#define BIND(func) std::bind(func, this)
-// #define FUNC2(func) [this]() { func(); }
-
 class Transition;
 
-class State
+class FsmState
 {
 private:
     std::function<void()> onEnter = nullptr;
@@ -29,13 +26,13 @@ private:
 public:
     std::list<Transition> transitions;
 
-    State(std::function<void()> onHandle)
+    FsmState(std::function<void()> onHandle)
         : onHandle(onHandle) {}
 
-    State(std::function<void()> onEnter, std::function<void()> onHandle, std::function<void()> onExit)
+    FsmState(std::function<void()> onEnter, std::function<void()> onHandle, std::function<void()> onExit)
         : onEnter(onEnter), onHandle(onHandle), onExit(onExit) {}
 
-    bool operator==(const State &other) const
+    bool operator==(const FsmState &other) const
     {
         return this == &other;
     }
@@ -47,26 +44,26 @@ public:
 
 struct Transition
 {
-    Transition(State *stateTo, std::function<bool()> condition)
+    Transition(FsmState *stateTo, std::function<bool()> condition)
         : stateTo(stateTo), condition(condition) {}
 
-    Transition(State *stateTo, uint32_t interval, std::function<bool()> condition = nullptr)
+    Transition(FsmState *stateTo, uint32_t interval, std::function<bool()> condition = nullptr)
         : stateTo(stateTo), interval(interval), condition(condition) {}
 
-    State *stateTo;
+    FsmState *stateTo;
     uint32_t interval = 0;
     std::function<bool()> condition = nullptr;
 };
 
-class FSM
+class StateMachine
 {
 private:
-    State *currentState;
+    FsmState *currentState;
     uint32_t lastTransitionTime = 0;
     bool firstRun = false;
 
 public:
-    FSM(State &initialState)
+    StateMachine(FsmState &initialState)
         : currentState(&initialState) {}
 
     void run()
@@ -95,14 +92,12 @@ public:
         currentState->handle();
     }
 
-    State createState(std::function<void()> onEnter, std::function<void()> onHandle, std::function<void()> onExit)
+    FsmState createState(std::function<void()> onEnter, std::function<void()> onHandle, std::function<void()> onExit)
     {
-        return State(onEnter, onHandle, onExit);
+        return FsmState(onEnter, onHandle, onExit);
     }
 
-
-
-    void transitionTo(State &newState)
+    void transitionTo(FsmState &newState)
     {
         currentState->exit();
         currentState = &newState;
@@ -110,34 +105,34 @@ public:
         lastTransitionTime = millis();
     }
 
-    void timedTransitionTo(State &newState, uint32_t interval)
+    void timedTransitionTo(FsmState &newState, uint32_t interval)
     {
         if (getTimeInState() >= interval)
             transitionTo(newState);
     }
 
-    void conditionalTransitionTo(State &newState, std::function<bool()> condition)
+    void conditionalTransitionTo(FsmState &newState, std::function<bool()> condition)
     {
         if (condition && condition())
             transitionTo(newState);
     }
 
-    void addTransition(State &stateFrom, State &stateTo, std::function<bool()> condition)
+    void addTransition(FsmState &stateFrom, FsmState &stateTo, std::function<bool()> condition)
     {
         stateFrom.transitions.push_back(Transition(&stateTo, condition));
     }
 
-    void addTimedTransition(State &stateFrom, State &stateTo, uint32_t interval, std::function<bool()> condition = nullptr)
+    void addTimedTransition(FsmState &stateFrom, FsmState &stateTo, uint32_t interval, std::function<bool()> condition = nullptr)
     {
         stateFrom.transitions.push_back(Transition(&stateTo, interval, condition));
     }
 
-    State &getState()
+    FsmState &getState()
     {
         return *currentState;
     }
 
-    bool isState(State &state)
+    bool isState(FsmState &state)
     {
         return (*currentState == state);
     }
