@@ -1,6 +1,7 @@
 #include <Arduino.h>
 #include <esp32-hal-log.h>
 // #include "log32.h"
+// #include "LogC.h"
 #include "Log.h"
 #include "Benchmark.h"
 
@@ -39,7 +40,7 @@ void loggerLoop()
     delay(1000);
 
     BENCHMARK_MICROS_BEGIN(ESP__LOGD);
-    ESP_LOGD(TAG, "Dbug %d, %s", 1, "debug");
+    ESP_LOGD(TAG, "Dbug %d, %s", 1.0, "debug");
     BENCHMARK_MICROS_END(ESP__LOGD);
 
     delay(1000);
