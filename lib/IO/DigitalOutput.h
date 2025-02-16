@@ -2,7 +2,7 @@
 
 #include <Arduino.h>
 
-template <typename PinType = uint8_t>
+template <typename TPin = uint8_t>
 class DigitalOutput
 {
 private:
@@ -10,12 +10,12 @@ private:
 
 public:
     DigitalOutput() {};
-    DigitalOutput(PinType pinNumber, uint8_t mode = OUTPUT) { init(pinNumber, mode); }
+    DigitalOutput(TPin pin, uint8_t mode = OUTPUT) { init(pin, mode); }
 
     /// @brief Initializes the digital output pin
     /// @param pinNumber The pin number to use
     /// @param mode The mode for the pin (OUTPUT, PULLUP, PULLDOWN) default is OUTPUT
-    void init(PinType pinNumber, uint8_t mode = OUTPUT)
+    void init(TPin pinNumber, uint8_t mode = OUTPUT)
     {
         pin = (uint8_t)pinNumber;
         pinMode(pin, mode);
