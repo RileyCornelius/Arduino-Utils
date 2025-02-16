@@ -1,8 +1,7 @@
 #include <Arduino.h>
 #include <esp32-hal-log.h>
 // #include "log32.h"
-// #include "log.h"
-#include "Log3.h"
+#include "Log.h"
 #include "Benchmark.h"
 
 static const char *TAG = "TAG";
@@ -34,6 +33,7 @@ void loggerLoop()
 
     BENCHMARK_MICROS_BEGIN(LOG__INFO3);
     LOG_INFO("TAG3", "Sensor %d %s", 352, "%");
+    LOG_OUTPUT.flush();
     BENCHMARK_MICROS_END(LOG__INFO3);
 
     delay(1000);

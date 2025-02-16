@@ -9,12 +9,16 @@
 
 #define LOG_LEVEL LOG_LEVEL_VERBOSE
 
-#define LOG_USE_TIME 1
+#define LOG_FILTER LOG_FILTER_EXCLUDE
 
-#define LOG_USE_TAG_SHORT 1
+#define LOG_FILTER_LIST ""
+
+#define LOG_USE_TIME 0
+
+#define LOG_USE_TAG_SHORT 0
 
 #define LOG_USE_COLORS 1
 
 #define LOG_OUTPUT Serial
 
-#include <Logger2.h>
+#include <loggerC.h>

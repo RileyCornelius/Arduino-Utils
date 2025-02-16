@@ -11,7 +11,7 @@
 
 #define LOG_FILTER LOG_FILTER_EXCLUDE
 
-#define LOG_FILTER_LIST ""
+#define LOG_FILTER_LIST {""}
 
 #define LOG_USE_TIME 0
 
@@ -21,4 +21,4 @@
 
 #define LOG_OUTPUT Serial
 
-#include <logger.h>
+#include <Logger.h>
