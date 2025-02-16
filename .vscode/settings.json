@@ -1,5 +1,6 @@
 {
     "files.associations": {
+        "*.ino": "cpp",
         "array": "cpp",
         "deque": "cpp",
         "string": "cpp",
@@ -46,6 +47,11 @@
         "cinttypes": "cpp",
         "typeinfo": "cpp",
         "map": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "bitset": "cpp",
+        "format": "cpp",
+        "span": "cpp",
+        "chrono": "cpp",
+        "variant": "cpp"
     }
 }
