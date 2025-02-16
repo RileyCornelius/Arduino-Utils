@@ -3,9 +3,9 @@
 #include <SimpleButton.h>
 #include <CallbackButton.h>
 
-static Button button(2);
-static SimpleButton simpleButton(3);
-static CallbackButton callbackButton(4);
+static Button button;
+static SimpleButton simpleButton;
+static CallbackButton callbackButton;
 
 void buttonTest()
 {
@@ -57,6 +57,10 @@ void simpleButtonTest()
 
 void buttonSetup()
 {
+    button.init(2);
+    simpleButton.init(3);
+    callbackButton.init(4);
+
     callbackButton.setClickedCallback([]()
                                       { Serial.println("Button clicked"); });
     callbackButton.setDoubleClickedCallback([]()

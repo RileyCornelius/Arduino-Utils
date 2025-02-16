@@ -5,8 +5,8 @@
 
 static Stopwatch stopwatch;
 static Timer timer(1000);
-static SimpleButton button(2);
-static SimpleButton button2(3);
+static SimpleButton button;
+static SimpleButton button2;
 
 void stopWatchTest()
 {
@@ -38,6 +38,8 @@ void stopWatchTest()
 
 void stopwatchSetup()
 {
+    button.init(2);
+    button2.init(3);
 }
 
 void stopwatchLoop()
