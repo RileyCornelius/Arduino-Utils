@@ -26,9 +26,15 @@ void loggerLoop()
 
     delay(1000);
 
-    BENCHMARK_MICROS_BEGIN(LOG__INFO);
-    LOG_INFO(TAG, "Sensor %d %s", 34, "%");
-    BENCHMARK_MICROS_END(LOG__INFO);
+    BENCHMARK_MICROS_BEGIN(LOG__INFO2);
+    LOG_INFO("TAG2", "Sensor %d %s", 34, "%");
+    BENCHMARK_MICROS_END(LOG__INFO2);
+
+    delay(1000);
+
+    BENCHMARK_MICROS_BEGIN(LOG__INFO3);
+    LOG_INFO("TAG3", "Sensor %d %s", 34, "%");
+    BENCHMARK_MICROS_END(LOG__INFO3);
 
     delay(1000);
 
