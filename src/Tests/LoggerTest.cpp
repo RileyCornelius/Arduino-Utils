@@ -2,7 +2,7 @@
 #include <esp32-hal-log.h>
 // #include "log32.h"
 // #include "log.h"
-#include "Log2.h"
+#include "Log3.h"
 #include "Benchmark.h"
 
 static const char *TAG = "TAG";
@@ -33,7 +33,7 @@ void loggerLoop()
     delay(1000);
 
     BENCHMARK_MICROS_BEGIN(LOG__INFO3);
-    LOG_INFO("TAG3", "Sensor %d %s", 34, "%");
+    LOG_INFO("TAG3", "Sensor %d %s", 352, "%");
     BENCHMARK_MICROS_END(LOG__INFO3);
 
     delay(1000);

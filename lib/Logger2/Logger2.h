@@ -107,7 +107,6 @@ static const char *_formatTimeHMS()
  * Logger Public Macros
  *-------------------------------------------------------------------------------------*/
 
-// Log format defines
 #if LOG_LEVEL >= LOG_LEVEL_VERBOSE
 #if LOG_USE_TIME
 #define LOG_VERBOSE(tag, message, ...) LOG_OUTPUT.printf(_LOG_TAG_TIME_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, tag, message), ##__VA_ARGS__);
@@ -160,7 +159,7 @@ static const char *_formatTimeHMS()
 #define LOG_ERROR(tag, message, ...)
 #endif
 
-// Without tag
+// Without Tag
 
 #if LOG_LEVEL >= LOG_LEVEL_VERBOSE
 #if LOG_USE_TIME
