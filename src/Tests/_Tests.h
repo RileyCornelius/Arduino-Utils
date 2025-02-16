@@ -59,6 +59,11 @@ void stateMachineLoop();
 void stopwatchSetup();
 void stopwatchLoop();
 
+// Time32Test.cpp
+
+void time32Setup();
+void time32Loop();
+
 // TimerTest.cpp
 
 void timerSetup();

@@ -9,25 +9,24 @@
  *-------------------------------------------------------------------------------------*/
 
 //   WiFi.begin("SSID", "PASSWORD");
-//   CTime time;
-//   time.setTimeFromNTP(WINNIPEG_TIMEZONE);
-//   time.updateTime();
-//   Serial.println(time.getFormatDateTime());
+//   Time32 time32;
+//   time32.setTimeFromNTP(TIMEZONE_UTC);
+//   Serial.println(time32.getDateTime());
 
 /**--------------------------------------------------------------------------------------
  * ESP32 Time library using C standard time library and Network Time Protocol (NTP)
  *-------------------------------------------------------------------------------------*/
 
-#define WINNIPEG_TIMEZONE "CST6CDT,M3.2.0,M11.1.0" // America/Winnipeg timezone
-#define UTC_TIMEZONE "UTC0"                        // Universal Time Coordinated timezone
+#define TIMEZONE_WINNIPEG "CST6CDT,M3.2.0,M11.1.0" // America/Winnipeg timezone
+#define TIMEZONE_UTC "UTC0"                        // Universal Time Coordinated timezone
 
-class CTime
+#define NTP_SERVER0 "0.ca.pool.ntp.org" // Canada NTP server 0
+#define NTP_SERVER1 "1.ca.pool.ntp.org" // Canada NTP server 1
+#define NTP_SERVER2 "2.ca.pool.ntp.org" // Canada NTP server 2
+
+class Time32
 {
 private:
-    const char *ntpServer0 = "0.ca.pool.ntp.org"; // Canada NTP server 0
-    const char *ntpServer1 = "1.ca.pool.ntp.org"; // Canada NTP server 1
-    const char *ntpServer2 = "2.ca.pool.ntp.org"; // Canada NTP server 2
-
     // Buffer to store the formatted date and time
     char dataTime[20];
     char date[11];
@@ -36,20 +35,20 @@ private:
     struct tm timeinfo = {0};
 
 public:
-    CTime() {};
+    Time32() {};
 
-    CTime(tm time)
+    Time32(tm time)
     {
         setTime(time);
     };
 
-    CTime(tm time, const char *tz)
+    Time32(tm time, const char *tz)
     {
         setTimeZone(tz);
         setTime(time); // called after setTimeZone else time will shift
     };
 
-    CTime(int seconds, int minutes, int hours, int day, int month, int year)
+    Time32(int seconds, int minutes, int hours, int day, int month, int year)
     {
         struct tm time = {0}; // Initialize the timeinfo struct with all zeros
         time.tm_sec = seconds;
@@ -62,14 +61,12 @@ public:
     };
 
     /**
-     * Update time using standard library functions
+     * Update timeinfo struct with the current time
+     * This function must be called before year(), month(), day(), hour(), minute(), second()
      */
     void updateTime()
     {
-        if (!getLocalTime(&timeinfo)) // esp32 function to get internal time
-        {
-            Serial.println("Set time is invalid");
-        }
+        getLocalTime(&timeinfo);
     }
 
     /**
@@ -82,11 +79,11 @@ public:
         setTime(timeinfo);
     }
 
-    // /**
-    //  * Set time using time struct
-    //  *
-    //  * @param time Time struct
-    //  */
+    /**
+     * Set time using time struct
+     *
+     * @param time Time struct
+     */
     void setTime(tm &time)
     {
         timeinfo = time;
@@ -95,8 +92,19 @@ public:
             .tv_usec = 0,
         };
         settimeofday(&tv, NULL);
+        updateTime();
     }
 
+    /**
+     * Set time using time struct
+     *
+     * @param year Year
+     * @param month Month
+     * @param day Day
+     * @param hour Hour
+     * @param min Minute
+     * @param sec Second
+     */
     void setTime(int year, int month, int day, int hour, int min, int sec)
     {
         timeinfo.tm_year = year - 1900;
@@ -106,16 +114,19 @@ public:
         timeinfo.tm_min = min;
         timeinfo.tm_sec = sec;
         setTime(timeinfo);
+        updateTime();
     }
 
     /**
      * Config time using the Network Time Protocol server and adds a timezone
      *
      * @param tz Timezone strings can be found here: https://github.com/nayarsystems/posix_tz_db/blob/master/zones.csv
+     * @param timeout Timeout in milliseconds (default 10000)
      */
-    void setTimeFromNTP(const char *tz = UTC_TIMEZONE)
+    bool setTimeFromNTP(const char *tz = TIMEZONE_UTC, int timeout = 10000)
     {
-        configTzTime(tz, ntpServer0, ntpServer1, ntpServer2); // esp32 function to set time using NTP and a timezone
+        configTzTime(tz, NTP_SERVER0, NTP_SERVER1, NTP_SERVER2); // esp32 function to set time using NTP and a timezone
+        return getLocalTime(&timeinfo, timeout);                 // wait timeout ms for the time to sync
     }
 
     /**
@@ -127,34 +138,7 @@ public:
     {
         setenv("TZ", tz, 1);
         tzset();
-    }
-
-    /**
-     * Config time and date using standard library functions
-     *
-     * @param time time struct
-     */
-    void setTime(tm &time)
-    {
-        timeinfo = time;
-        time_t t = mktime(&timeinfo);
-        struct timeval now = {.tv_sec = t};
-        settimeofday(&now, NULL);
-    }
-
-    /**
-     * Config time and date using standard library functions
-     */
-    void setTime(int seconds, int minutes, int hours, int day, int month, int year)
-    {
-        struct tm time = {0}; // Initialize the timeinfo struct with all zeros
-        time.tm_sec = seconds;
-        time.tm_min = minutes;
-        time.tm_hour = hours;
-        time.tm_mday = day;
-        time.tm_mon = month - 1;    // tm_mon is value 0-11
-        time.tm_year = year - 1900; // tm_year is the number of years since 1900
-        setTime(time);
+        updateTime();
     }
 
     /**
@@ -165,67 +149,83 @@ public:
      * @param format format of the time string
      * @return Formatted time string
      */
-    const char *getStrfTime(char *buff, size_t size, const char *format)
+    const char *getFormattedTime(char *buff, size_t size, const char *format)
     {
+        updateTime();
         strftime(buff, size, format, &timeinfo);
         return buff;
     }
 
+    /**
+     * Get string formatted time - https://cplusplus.com/reference/ctime/strftime/
+     *
+     * @param format format of the time string
+     * @return Formatted time string
+     */
+    String getFormattedTime(const char *format)
+    {
+        updateTime();
+        char buff[64];
+        strftime(buff, sizeof(buff), format, &timeinfo);
+        return String(buff);
+    }
+
+    /**
+     * Get current date in YYYY-MM-DD format
+     */
     const char *getDate()
     {
-        sprintf(date, "%04d-%02d-%02d",
-                getYear(),
-                getMonth(),
-                getDay());
-
+        updateTime();
+        sprintf(date, "%04d-%02d-%02d", year(), month(), day());
         return date;
     }
 
+    /**
+     * Get current time in HH:MM:SS format
+     */
     const char *getTime()
     {
-        sprintf(time, "%02d:%02d:%02d",
-                getHours(),
-                getMinutes(),
-                getSeconds());
-
+        updateTime();
+        sprintf(time, "%02d:%02d:%02d", hour(), minute(), second());
         return time;
     }
 
+    /**
+     * Get current time in YYYY-MM-DD HH:MM:SS format
+     */
     const char *getDateTime()
     {
-        sprintf(dataTime, "%s %s",
-                getDate(),
-                getTime());
-
+        updateTime();
+        sprintf(dataTime, "%04d-%02d-%02d %02d:%02d:%02d", year(), month(), day(), hour(), minute(), second());
         return dataTime;
     }
 
-    int getYear()
+    int year()
     {
         return timeinfo.tm_year + 1900; // since 1900
     }
 
-    int getMonth()
+    int month()
     {
         return timeinfo.tm_mon + 1; // tm_mon is value 0-11
     }
 
-    int getDay()
+    int day()
     {
         return timeinfo.tm_mday;
     }
 
-    int getHours()
+    int hour()
     {
         return timeinfo.tm_hour;
     }
 
-    int getMinutes()
+    int minute()
     {
         return timeinfo.tm_min;
     }
 
-    int getSeconds()
+    int second()
     {
         return timeinfo.tm_sec;
     }

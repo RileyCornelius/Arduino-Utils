@@ -8,13 +8,11 @@ void setup()
   Serial.begin(115200);
   delay(1000);
 
-  arraySetup();
+  time32Setup();
 }
 
 void loop()
 {
-  // timerLoop();
-  // simpleStateMachineLoop();
 
-  arrayLoop();
+  time32Loop();
 }
