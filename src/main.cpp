@@ -8,11 +8,10 @@ void setup()
   Serial.begin(115200);
   delay(1000);
 
-  time32Setup();
+  loggerSetup();
 }
 
 void loop()
 {
-
-  time32Loop();
+  loggerLoop();
 }

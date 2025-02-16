@@ -1,40 +1,46 @@
 #include <Arduino.h>
-#include "log.h"
+// #include <esp32-hal-log.h>
+#include "log32.h"
+// #include "log.h"
+#include "Logger4.h"
 #include "Benchmark.h"
+
+static const char *TAG = "TAG";
 
 void loggerSetup()
 {
-    // Serial.begin(115200);
+    Serial.begin(115200);
 }
 
 void loggerLoop()
 {
-    // LOG_I("std" << 1.00);
+    BENCHMARK_MICROS_BEGIN(LOG__I);
+    LOG_I("Timeing %d %s", 1, "ms");
+    BENCHMARK_MICROS_END(LOG__I);
 
-    // BENCHMARK_MICROS_BEGIN();
-    // LOG_VERBOSE(LOG_TAG, "Verbose");
-    // BENCHMARK_MICROS_END("LOG_VERBOSE execution time: ");
+    delay(1000);
 
-    // BENCHMARK_MICROS_BEGIN();
-    // LOG_INFO(LOG_TAG, "Info");
-    // BENCHMARK_MICROS_END("LOG_INFO execution time: ");
+    BENCHMARK_MICROS_BEGIN(LOG__INFO);
+    LOG_INFO(TAG, "Sensor %d %s", 34, "%");
+    BENCHMARK_MICROS_END(LOG__INFO);
 
-    // LOG_DEBUG(LOG_TAG, "Debug");
-    // LOG_WARNING("LOG", "TEST got %d", 1);
+    delay(1000);
 
-    // LOG_E("Error %s", "error");
-    // LOG_W("Warning %d", 1);
+    BENCHMARK_MICROS_BEGIN(log__d);
+    log_d("Dbug %d, %s", 1, "debug");
+    BENCHMARK_MICROS_END(log__d);
 
-    // BENCHMARK_MICROS_BEGIN();
-    // Serial.println("Serial3");
-    // Serial.flush();
-    // BENCHMARK_MICROS_END("Serial3 execution time: ");
+    delay(1000);
 
-    // BENCHMARK_MICROS_BEGIN();
-    // log_i("Info");
-    // BENCHMARK_MICROS_END("log_i execution time: ");
+    BENCHMARK_MICROS_BEGIN(ESP__LOGD);
+    ESP_LOGD(TAG, "Dbug %d, %s", 1, "debug");
+    BENCHMARK_MICROS_END(ESP__LOGD);
 
-    // BENCHMARK_MICROS_BEGIN();
-    // ESP_LOGI("gd", "Info");
-    // BENCHMARK_MICROS_END("ESP execution time: ");
+    delay(1000);
+
+    BENCHMARK_MICROS_BEGIN(Seral);
+    Serial.printf("[INFO] [TAG] Info %d %s\n", 1, "seral");
+    BENCHMARK_MICROS_END(Seral);
+
+    delay(1000);
 }
