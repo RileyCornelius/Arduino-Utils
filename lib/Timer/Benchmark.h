@@ -1,14 +1,50 @@
 #pragma once
 
+class Benchmark
+{
+    const char *label;
+    unsigned long startTime;
+    Stream *serial;
+
+    virtual uint32_t now() { return millis(); }
+
+public:
+    Benchmark(const char *l = "Benchmark", Stream &s = Serial) : label(l), serial(&s) {}
+
+    void start()
+    {
+        startTime = now();
+    }
+
+    void end(const char *newLabel = nullptr)
+    {
+        if (newLabel)
+            label = newLabel;
+
+        serial->printf("%s: %lu ms\n", label, now() - startTime);
+    }
+};
+
+class BenchmarkMicros : public Benchmark
+{
+    using Benchmark::Benchmark;
+
+    uint32_t now() override { return micros(); }
+};
+
+// Benchmark Macros Settings
+
 // Toggle debug benchmarking
 #ifndef DEBUG_BENCHMARK
 #define DEBUG_BENCHMARK 1
 #endif
 
-// Benchmarking serial port
+// Benchmark serial port
 #ifndef DEBUG_BENCHMARK_SERIAL
 #define DEBUG_BENCHMARK_SERIAL Serial
 #endif
+
+// Benchmark Macros
 
 #if DEBUG_BENCHMARK
 // Creates previous time with label, use same label with BENCHMARK_END(label) to print elapsed milliseconds
