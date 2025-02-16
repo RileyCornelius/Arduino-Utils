@@ -2,14 +2,14 @@
 
 #define LED_PIN 5
 
-enum class Pin : uint8_t
+enum class Led : uint8_t
 {
     LED1 = 3,
     LED2 = 4,
 };
-using LedDigitalOutput = DigitalOutput<Pin>;
+using LedDigitalOutput = DigitalOutput<Led>;
 
-static LedDigitalOutput led = LedDigitalOutput(Pin::LED1);
+static LedDigitalOutput led = LedDigitalOutput(Led::LED1);
 static DigitalOutput led2;
 
 void digitalOutputSetup()
