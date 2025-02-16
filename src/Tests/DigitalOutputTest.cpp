@@ -10,7 +10,7 @@ enum class Led : uint8_t
 using LedDigitalOutput = DigitalOutput<Led>;
 
 static LedDigitalOutput led = LedDigitalOutput(Led::LED1);
-static DigitalOutput led2;
+static DigitalOutput<uint8_t> led2;
 
 void digitalOutputSetup()
 {

@@ -24,7 +24,7 @@ namespace FSM2
             case 3:
                 return "Paused";
             default:
-                assert(false);
+                // assert(false);
                 return "";
             }
         }

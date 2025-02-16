@@ -3,7 +3,7 @@
 void outOfBounds()
 {
     uint32_t uintArray[] = {1, 2, 3};
-    Array<uint32_t> array = Array(uintArray);
+    Array<uint32_t> array = Array<uint32_t>(uintArray);
     Serial.println(array[5]); // ! assert failed: index < length
 }
 
@@ -26,7 +26,7 @@ Array<int> createArray()
 void arraySetup()
 {
     int intArrayData[] = {1, 2, 3, 4, 5};
-    Array intArray = Array(intArrayData);
+    Array<int> intArray = Array<int>(intArrayData);
     Serial.println(intArray.size());
 
     // Array<int> intArray2 = createArray();

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <assert.h>
 
 template <typename T>
 class Array

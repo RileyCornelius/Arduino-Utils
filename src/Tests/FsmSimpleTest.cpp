@@ -9,9 +9,9 @@
 
 namespace player
 {
-    void playing() { log_d("Playing"); }
-    void idle() { log_d("Idle"); }
-    void paused() { log_d("Paused"); }
+    void playing() { Serial.println("Playing"); }
+    void idle() { Serial.println("Idle"); }
+    void paused() { Serial.println("Paused"); }
 
     enum Event
     {
@@ -36,7 +36,7 @@ namespace player
         },
         .onTransition = [](const Event &event, const State &from, const State &to)
         {
-            log_i("Event: %d - State: %d => %d", event, from, to);
+            Serial.printf("Event: %d - State: %d => %d\n", event, from, to);
         },
     };
 
@@ -48,9 +48,9 @@ namespace player
 
 namespace player2
 {
-    void playing() { log_d("Playing"); }
-    void idle() { log_d("Idle"); }
-    void paused() { log_d("Paused"); }
+    void playing() { Serial.println("Playing"); }
+    void idle() { Serial.println("Idle"); }
+    void paused() { Serial.println("Paused"); }
 
     using Event = const char *;
     using State = const char *;
@@ -72,7 +72,7 @@ namespace player2
         },
         .onTransition = [](const Event &event, const State &from, const State &to)
         {
-            log_i("2Event: %s - State: %s => %s", event, from, to);
+            Serial.printf("2Event: %s - State: %s => %s\n", event, from, to);
         },
     };
 

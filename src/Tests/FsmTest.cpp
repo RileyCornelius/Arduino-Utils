@@ -9,10 +9,10 @@
 
 namespace player3
 {
-    void playing() { log_d("Playing"); }
-    void paused() { log_d("Paused"); }
-    void idle() { log_d("Idle"); }
-    void start() { log_d("Start"); }
+    void playing() { Serial.println("Playing"); }
+    void paused() { Serial.println("Paused"); }
+    void idle() { Serial.println("Idle"); }
+    void start() { Serial.println("Start"); }
 
     enum Event
     {
@@ -42,7 +42,7 @@ namespace player3
         },
         .onTransition = [](const Event &event, const fsm::State &from, const fsm::State &to)
         {
-            log_i("Event: %s - State: %s => %s", eventNames[event], from.name, to.name);
+            Serial.printf("Event: %s - State: %s => %s\n", eventNames[event], from.name, to.name);
         },
     };
 
@@ -51,7 +51,7 @@ namespace player3
         bool stateChanged = fsm.trigger(event);
         if (!stateChanged)
         {
-            log_w("Invalid transition from %s with event %s", fsm.currentState->name, eventNames[event]);
+            Serial.printf("Invalid transition from %s with event %s\n", fsm.currentState->name, eventNames[event]);
         }
     }
 
