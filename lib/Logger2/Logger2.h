@@ -26,6 +26,11 @@
 // #define LOG_FILTER_LIST ""
 // #endif
 
+// Endline
+#ifndef endl
+#define endl "\r\n"
+#endif
+
 // Timestamp
 #ifndef LOG_USE_TIME
 #define LOG_USE_TIME 0
@@ -42,41 +47,57 @@
 #endif
 
 #if LOG_USE_COLORS
-#define ARDUHAL_LOG_COLOR_BLACK "30"
-#define ARDUHAL_LOG_COLOR_RED "31"    // ERROR
-#define ARDUHAL_LOG_COLOR_GREEN "32"  // INFO
-#define ARDUHAL_LOG_COLOR_YELLOW "33" // WARNING
-#define ARDUHAL_LOG_COLOR_BLUE "34"
-#define ARDUHAL_LOG_COLOR_MAGENTA "35"
-#define ARDUHAL_LOG_COLOR_CYAN "36" // DEBUG
-#define ARDUHAL_LOG_COLOR_GRAY "37" // VERBOSE
-#define ARDUHAL_LOG_COLOR_WHITE "38"
+#define _LOG_COLOR_BLACK "30"
+#define _LOG_COLOR_RED "31"    // ERROR
+#define _LOG_COLOR_GREEN "32"  // INFO
+#define _LOG_COLOR_YELLOW "33" // WARNING
+#define _LOG_COLOR_BLUE "34"
+#define _LOG_COLOR_MAGENTA "35"
+#define _LOG_COLOR_CYAN "36" // DEBUG
+#define _LOG_COLOR_GRAY "37" // VERBOSE
+#define _LOG_COLOR_WHITE "38"
 
-#define ARDUHAL_LOG_COLOR(COLOR) "\033[0;" COLOR "m"
-#define ARDUHAL_LOG_BOLD(COLOR) "\033[1;" COLOR "m"
-#define ARDUHAL_LOG_RESET_COLOR "\033[0m"
+#define _LOG_COLOR(COLOR) "\033[0;" COLOR "m"
+#define _LOG_BOLD(COLOR) "\033[1;" COLOR "m"
+#define _LOG_RESET_COLOR "\033[0m"
 
-#define ARDUHAL_LOG_COLOR_E ARDUHAL_LOG_COLOR(ARDUHAL_LOG_COLOR_RED)
-#define ARDUHAL_LOG_COLOR_W ARDUHAL_LOG_COLOR(ARDUHAL_LOG_COLOR_YELLOW)
-#define ARDUHAL_LOG_COLOR_I ARDUHAL_LOG_COLOR(ARDUHAL_LOG_COLOR_GREEN)
-#define ARDUHAL_LOG_COLOR_D ARDUHAL_LOG_COLOR(ARDUHAL_LOG_COLOR_CYAN)
-#define ARDUHAL_LOG_COLOR_V ARDUHAL_LOG_COLOR(ARDUHAL_LOG_COLOR_GRAY)
-#define ARDUHAL_LOG_COLOR_PRINT(letter) log_printf(ARDUHAL_LOG_COLOR_##letter)
-#define ARDUHAL_LOG_COLOR_PRINT_END log_printf(ARDUHAL_LOG_RESET_COLOR)
+#define _LOG_COLOR_E _LOG_COLOR(_LOG_COLOR_RED)
+#define _LOG_COLOR_W _LOG_COLOR(_LOG_COLOR_YELLOW)
+#define _LOG_COLOR_I _LOG_COLOR(_LOG_COLOR_GREEN)
+#define _LOG_COLOR_D _LOG_COLOR(_LOG_COLOR_CYAN)
+#define _LOG_COLOR_V _LOG_COLOR(_LOG_COLOR_GRAY)
 #else
-#define ARDUHAL_LOG_COLOR_E ""
-#define ARDUHAL_LOG_COLOR_W ""
-#define ARDUHAL_LOG_COLOR_I ""
-#define ARDUHAL_LOG_COLOR_D ""
-#define ARDUHAL_LOG_COLOR_V ""
-#define ARDUHAL_LOG_RESET_COLOR ""
-#define ARDUHAL_LOG_COLOR_PRINT(letter)
-#define ARDUHAL_LOG_COLOR_PRINT_END
+#define _LOG_COLOR_E ""
+#define _LOG_COLOR_W ""
+#define _LOG_COLOR_I ""
+#define _LOG_COLOR_D ""
+#define _LOG_COLOR_V ""
+#define _LOG_RESET_COLOR ""
 #endif
 
 /**--------------------------------------------------------------------------------------
  * Logger Defines
  *-------------------------------------------------------------------------------------*/
+
+#if LOG_USE_TAG_SHORT
+static const char *_logLevelText[] = {"E", "W", "I", "D", "V"};
+#else
+static const char *_logLevelText[] = {"EROR", "WARN", "INFO", "DBUG", "VERB"};
+#endif
+
+#if LOG_USE_TIME
+static const char *_formatTimeHMS()
+{
+    static char timeFormat[18];
+    unsigned long ms = millis();
+    unsigned long seconds, minutes, hours, days;
+    seconds = ms / 1000;
+    minutes = seconds / 60;
+    hours = minutes / 60;
+    sprintf(timeFormat, "%02u:%02u:%02u:%03u", hours % 24, minutes % 60, seconds % 60, ms % 1000);
+    return timeFormat;
+}
+#endif
 
 // LOG levels order/priority. IF LOG_LEVEL_NONE is set, then nothing will be logged
 #define LOG_LEVEL_NONE -1
@@ -85,33 +106,61 @@
 #define LOG_LEVEL_INFO 2
 #define LOG_LEVEL_DEBUG 3
 #define LOG_LEVEL_VERBOSE 4
+
+// Custom log print formats
+#define LOG_CUSTOM_TAG_FORMAT(loglevel, color, tag, format) color "[%s][%s] " format _LOG_RESET_COLOR endl, _logLevelText[loglevel], tag
+#define LOG_CUSTOM_FORMAT(loglevel, color, format) color "[%s] " format _LOG_RESET_COLOR endl, _logLevelText[loglevel]
+
+#define LOG_CUSTOM_TAG_TIME_FORMAT(loglevel, color, tag, format) color "[%s][%s][%s] " format _LOG_RESET_COLOR endl, _formatTimeHMS(), _logLevelText[loglevel], tag
+#define LOG_CUSTOM_TIME_FORMAT(loglevel, color, format) color "[%s][%s] " format _LOG_RESET_COLOR endl, _formatTimeHMS(), _logLevelText[loglevel]
+
 // Log format defines
 #if LOG_LEVEL >= LOG_LEVEL_VERBOSE
-#define LOG_VERBOSE(tag, message, ...) _itagformat(LOG_LEVEL_VERBOSE, ARDUHAL_LOG_COLOR_V, tag, message, ##__VA_ARGS__)
+#if LOG_USE_TIME
+#define LOG_VERBOSE(tag, message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_TAG_TIME_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, tag, message), ##__VA_ARGS__);
+#else
+#define LOG_VERBOSE(tag, message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_TAG_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, tag, message), ##__VA_ARGS__);
+#endif
 #else
 #define LOG_VERBOSE(tag, message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
-#define LOG_DEBUG(tag, message, ...) _itagformat(LOG_LEVEL_DEBUG, ARDUHAL_LOG_COLOR_D, tag, message, ##__VA_ARGS__)
+#if LOG_USE_TIME
+#define LOG_DEBUG(tag, message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_TAG_TIME_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, tag, message), ##__VA_ARGS__);
+#else
+#define LOG_DEBUG(tag, message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_TAG_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, tag, message), ##__VA_ARGS__);
+#endif
 #else
 #define LOG_DEBUG(tag, message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_INFO
-#define LOG_INFO(tag, message, ...) _itagformat(LOG_LEVEL_INFO, ARDUHAL_LOG_COLOR_I, tag, message, ##__VA_ARGS__)
+#if LOG_USE_TIME
+#define LOG_INFO(tag, message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_TAG_TIME_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, tag, message), ##__VA_ARGS__);
+#else
+#define LOG_INFO(tag, message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_TAG_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, tag, message), ##__VA_ARGS__);
+#endif
 #else
 #define LOG_INFO(tag, message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_WARNING
-#define LOG_WARNING(tag, message, ...) _itagformat(LOG_LEVEL_WARNING, ARDUHAL_LOG_COLOR_W, tag, message, ##__VA_ARGS__)
+#if LOG_USE_TIME
+#define LOG_WARNING(tag, message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_TAG_TIME_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, tag, message), ##__VA_ARGS__);
+#else
+#define LOG_WARNING(tag, message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_TAG_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, tag, message), ##__VA_ARGS__);
+#endif
 #else
 #define LOG_WARNING(tag, message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_ERROR
-#define LOG_ERROR(tag, message, ...) _itagformat(LOG_LEVEL_ERROR, ARDUHAL_LOG_COLOR_E, tag, message, ##__VA_ARGS__)
+#if LOG_USE_TIME
+#define LOG_ERROR(tag, message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_TAG_TIME_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, tag, message), ##__VA_ARGS__);
+#else
+#define LOG_ERROR(tag, message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_TAG_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, tag, message), ##__VA_ARGS__);
+#endif
 #else
 #define LOG_ERROR(tag, message, ...)
 #endif
@@ -119,37 +168,51 @@
 // Without tag
 
 #if LOG_LEVEL >= LOG_LEVEL_VERBOSE
-#define LOG_V(message, ...) _iformat(LOG_LEVEL_VERBOSE, ARDUHAL_LOG_COLOR_V, message, ##__VA_ARGS__)
+#if LOG_USE_TIME
+#define LOG_V(message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_TIME_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, message), ##__VA_ARGS__);
+#else
+#define LOG_V(message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, message), ##__VA_ARGS__);
+#endif
 #else
 #define LOG_V(message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
-#define LOG_D(message, ...) _iformat(LOG_LEVEL_DEBUG, ARDUHAL_LOG_COLOR_D, message, ##__VA_ARGS__)
+#if LOG_USE_TIME
+#define LOG_D(message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_TIME_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, message), ##__VA_ARGS__);
+#else
+#define LOG_D(message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, message), ##__VA_ARGS__);
+#endif
 #else
 #define LOG_D(message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_INFO
-#define LOG_I(message, ...) _iformat(LOG_LEVEL_INFO, ARDUHAL_LOG_COLOR_I, message, ##__VA_ARGS__)
+#if LOG_USE_TIME
+#define LOG_I(message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_TIME_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, message), ##__VA_ARGS__);
+#else
+#define LOG_I(message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, message), ##__VA_ARGS__);
+#endif
 #else
 #define LOG_I(message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_WARNING
-#define LOG_W(message, ...) _iformat(LOG_LEVEL_WARNING, ARDUHAL_LOG_COLOR_W, message, ##__VA_ARGS__)
+#if LOG_USE_TIME
+#define LOG_W(message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_TIME_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, message), ##__VA_ARGS__);
+#else
+#define LOG_W(message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, message), ##__VA_ARGS__);
+#endif
 #else
 #define LOG_W(message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_ERROR
-#define LOG_E(message, ...) _iformat(LOG_LEVEL_ERROR, ARDUHAL_LOG_COLOR_E, message, ##__VA_ARGS__)
+#if LOG_USE_TIME
+#define LOG_E(message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_TIME_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, message), ##__VA_ARGS__);
+#else
+#define LOG_E(message, ...) LOG_OUTPUT.printf(LOG_CUSTOM_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, message), ##__VA_ARGS__);
+#endif
 #else
 #define LOG_E(message, ...)
 #endif
-
-// Prototypes functions
-void _itagformat(uint8_t level, const char *color, const char *tag, const char *format, ...);
-void _itagformat(uint8_t level, const char *color, const char *tag, String format, ...);
-void _iformat(uint8_t level, const char *color, const char *format, ...);
-void _iformat(uint8_t level, const char *color, String format, ...);
