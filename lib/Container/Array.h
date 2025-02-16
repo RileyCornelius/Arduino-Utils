@@ -24,6 +24,17 @@ public:
     T &back() { return array[length - 1]; }
     const T &back() const { return array[length - 1]; }
 
-    T &operator[](uint32_t index) { return array[index]; }
-    const T &operator[](uint32_t index) const { return array[index]; }
+    T &at(uint32_t index)
+    {
+        assert(index < length);
+        return array[index];
+    }
+    const T &at(uint32_t index) const
+    {
+        assert(index < length);
+        return array[index];
+    }
+
+    T &operator[](uint32_t index) { return at(index); }
+    const T &operator[](uint32_t index) const { return at(index); }
 };
