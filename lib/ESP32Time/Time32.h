@@ -3,7 +3,6 @@
 #ifdef ARDUINO_ARCH_ESP32
 
 #include <Arduino.h>
-#include <WiFi.h>
 
 /**--------------------------------------------------------------------------------------
  * Example
@@ -37,16 +36,19 @@ private:
     struct tm timeinfo = {0};
 
 public:
-    CTime(){};
+    CTime() {};
+
     CTime(tm time)
     {
         setTime(time);
     };
+
     CTime(tm time, const char *tz)
     {
         setTimeZone(tz);
         setTime(time); // called after setTimeZone else time will shift
     };
+
     CTime(int seconds, int minutes, int hours, int day, int month, int year)
     {
         struct tm time = {0}; // Initialize the timeinfo struct with all zeros
@@ -85,26 +87,26 @@ public:
     //  *
     //  * @param time Time struct
     //  */
-    // void setTime(tm &time)
-    // {
-    //     timeinfo = time;
-    //     timeval tv = {
-    //         .tv_sec = mktime(&time),
-    //         .tv_usec = 0,
-    //     };
-    //     settimeofday(&tv, NULL);
-    // }
+    void setTime(tm &time)
+    {
+        timeinfo = time;
+        timeval tv = {
+            .tv_sec = mktime(&time),
+            .tv_usec = 0,
+        };
+        settimeofday(&tv, NULL);
+    }
 
-    // void setTime(int year, int month, int day, int hour, int min, int sec)
-    // {
-    //     timeinfo.tm_year = year - 1900;
-    //     timeinfo.tm_mon = month - 1;
-    //     timeinfo.tm_mday = day;
-    //     timeinfo.tm_hour = hour;
-    //     timeinfo.tm_min = min;
-    //     timeinfo.tm_sec = sec;
-    //     setTime(timeinfo);
-    // }
+    void setTime(int year, int month, int day, int hour, int min, int sec)
+    {
+        timeinfo.tm_year = year - 1900;
+        timeinfo.tm_mon = month - 1;
+        timeinfo.tm_mday = day;
+        timeinfo.tm_hour = hour;
+        timeinfo.tm_min = min;
+        timeinfo.tm_sec = sec;
+        setTime(timeinfo);
+    }
 
     /**
      * Config time using the Network Time Protocol server and adds a timezone
