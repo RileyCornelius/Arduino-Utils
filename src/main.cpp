@@ -7,10 +7,14 @@ void setup()
 {
   Serial.begin(115200);
   delay(1000);
+
+  arraySetup();
 }
 
 void loop()
 {
   // timerLoop();
-  simpleStateMachineLoop();
+  // simpleStateMachineLoop();
+
+  arrayLoop();
 }

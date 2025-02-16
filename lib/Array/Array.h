@@ -1,24 +1,29 @@
 #pragma once
 
+#include <Arduino.h>
+
 template <typename T>
 class Array
 {
 private:
-    T *beginPtr;
-    T *endPtr;
+    T *array;
+    uint32_t length;
 
 public:
-    template <size_t size>
-    constexpr Array(T (&ptr)[size])
-        : beginPtr(ptr), endPtr(ptr + size) {}
+    template <uint32_t size_>
+    Array(T (&ptr)[size_]) : array(ptr), length(size_) {}
 
-    T &operator[](size_t index) { return beginPtr[index]; }
+    uint32_t size() const { return length; }
 
-    size_t size() { return static_cast<size_t>(endPtr - beginPtr); }
+    T *data() { return array; }
+    const T *data() const { return array; }
 
-    T *begin() { return beginPtr; }
-    T *end() { return endPtr; }
+    T &front() { return array[0]; }
+    const T &front() const { return array[0]; }
 
-    T &front() { return *beginPtr; }
-    T &back() { return *(endPtr - 1); }
+    T &back() { return array[length - 1]; }
+    const T &back() const { return array[length - 1]; }
+
+    T &operator[](uint32_t index) { return array[index]; }
+    const T &operator[](uint32_t index) const { return array[index]; }
 };

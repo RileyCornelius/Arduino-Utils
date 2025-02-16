@@ -1,4 +1,9 @@
 
+// ArrayTest.cpp
+
+void arraySetup();
+void arrayLoop();
+
 // Benchmark.cpp
 
 void benchmarkSetup();
