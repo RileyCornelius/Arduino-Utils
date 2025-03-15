@@ -11,6 +11,3 @@ A collection of utility classes and functions designed for Arduino framework.
 
 ## Usage
 Clone or download this repository and copy desired libraries from the `lib` folder into your PlatformIO project's `lib` directory.
-
-## ToDo
-- [ ] Flesh out CTime and rename it
