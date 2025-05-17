@@ -1,6 +1,8 @@
 #pragma once
 
 #include <string.h>
+#include <stdio.h>
+#include <stdarg.h>
 
 /**--------------------------------------------------------------------------------------
  * Logger Level Options
@@ -13,8 +15,9 @@
 #define LOG_LEVEL_DEBUG 3
 #define LOG_LEVEL_VERBOSE 4
 
-#define LOG_FILTER_INCLUDE 1
-#define LOG_FILTER_EXCLUDE 0
+#define LOG_FILTER_INCLUDE 2
+#define LOG_FILTER_EXCLUDE 1
+#define LOG_FILTER_DISABLE 0
 
 /**--------------------------------------------------------------------------------------
  * Logger Settings
@@ -32,15 +35,11 @@
 #endif
 
 #ifndef LOG_FILTER
-#define LOG_FILTER LOG_FILTER_EXCLUDE
+#define LOG_FILTER LOG_FILTER_DISABLE
 #endif
 
 #ifndef LOG_FILTER_LIST
 #define LOG_FILTER_LIST {""}
-#endif
-
-#ifndef endl
-#define endl "\r\n"
 #endif
 
 #ifndef LOG_USE_TIME
@@ -53,6 +52,10 @@
 
 #ifndef LOG_USE_COLORS
 #define LOG_USE_COLORS 0
+#endif
+
+#ifndef LOG_EOL
+#define LOG_EOL "\r\n"
 #endif
 
 /**--------------------------------------------------------------------------------------
@@ -94,6 +97,47 @@ static const char *_logLevelText[] = {"E", "W", "I", "D", "V"};
 static const char *_logLevelText[] = {"EROR", "WARN", "INFO", "DBUG", "VERB"};
 #endif // LOG_USE_TAG_SHORT
 
+#if LOG_LEVEL != LOG_LEVEL_NONE
+static void _vprintf(const char *format, va_list arg)
+{
+    char buf[64];
+    char *temp = buf;
+    va_list copy;
+    va_copy(copy, arg);
+    int len = vsnprintf(temp, sizeof(buf), format, copy);
+    va_end(copy);
+    if (len < 0)
+    {
+        va_end(arg);
+        return;
+    }
+    if (len >= (int)sizeof(buf))
+    {
+        temp = (char *)malloc(len + 1);
+        if (temp == NULL)
+        {
+            va_end(arg);
+            return;
+        }
+        len = vsnprintf(temp, len + 1, format, arg);
+    }
+    va_end(arg);
+    LOG_OUTPUT.print(temp);
+    if (temp != buf)
+    {
+        free(temp);
+    }
+}
+
+static void _printf(const char *format, ...)
+{
+    va_list arg;
+    va_start(arg, format);
+    _vprintf(format, arg);
+    va_end(arg);
+}
+#endif // LOG_LEVEL != LOG_LEVEL_NONE
+
 #if LOG_USE_TIME
 static const char *_formatTimeHMS()
 {
@@ -108,6 +152,7 @@ static const char *_formatTimeHMS()
 }
 #endif // LOG_USE_TIME
 
+#if LOG_USE_LOG_FILTER != LOG_FILTER_DISABLE
 static bool _logFilter(const char *tag)
 {
     static const char *filterList[] = LOG_FILTER_LIST;
@@ -125,11 +170,16 @@ static bool _logFilter(const char *tag)
     return LOG_FILTER ? inFilter : !inFilter; // INCLUDE or EXCLUDE
 }
 
-#define _LOG_TAG_FORMAT(loglevel, color, tag, format) color "[%s][%s] " format _LOG_RESET_COLOR endl, _logLevelText[loglevel], tag
-#define _LOG_FORMAT(loglevel, color, format) color "[%s] " format _LOG_RESET_COLOR endl, _logLevelText[loglevel]
+#define _IF_LOG_FILTER if (_logFilter(tag))
+#else
+#define _IF_LOG_FILTER
+#endif // LOG_USE_LOG_FILTER
 
-#define _LOG_TAG_TIME_FORMAT(loglevel, color, tag, format) color "[%s][%s][%s] " format _LOG_RESET_COLOR endl, _formatTimeHMS(), _logLevelText[loglevel], tag
-#define _LOG_TIME_FORMAT(loglevel, color, format) color "[%s][%s] " format _LOG_RESET_COLOR endl, _formatTimeHMS(), _logLevelText[loglevel]
+#define _LOG_TAG_FORMAT(loglevel, color, tag, format) color "[%s][%s] " format _LOG_RESET_COLOR LOG_EOL, _logLevelText[loglevel], tag
+#define _LOG_FORMAT(loglevel, color, format) color "[%s] " format _LOG_RESET_COLOR LOG_EOL, _logLevelText[loglevel]
+
+#define _LOG_TAG_TIME_FORMAT(loglevel, color, tag, format) color "[%s][%s][%s] " format _LOG_RESET_COLOR LOG_EOL, _formatTimeHMS(), _logLevelText[loglevel], tag
+#define _LOG_TIME_FORMAT(loglevel, color, format) color "[%s][%s] " format _LOG_RESET_COLOR LOG_EOL, _formatTimeHMS(), _logLevelText[loglevel]
 
 #endif // LOG_LEVEL != LOG_LEVEL_NONE
 
@@ -140,12 +190,12 @@ static bool _logFilter(const char *tag)
 #if LOG_LEVEL >= LOG_LEVEL_VERBOSE
 #if LOG_USE_TIME
 #define LOG_VERBOSE(tag, message, ...) \
-    if (_logFilter(tag))               \
-        LOG_OUTPUT.printf(_LOG_TAG_TIME_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, tag, message), ##__VA_ARGS__);
+    _IF_LOG_FILTER                     \
+    _printf(_LOG_TAG_TIME_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, tag, message), ##__VA_ARGS__);
 #else
 #define LOG_VERBOSE(tag, message, ...) \
-    if (_logFilter(tag))               \
-        LOG_OUTPUT.printf(_LOG_TAG_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, tag, message), ##__VA_ARGS__);
+    _IF_LOG_FILTER                     \
+    _printf(_LOG_TAG_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, tag, message), ##__VA_ARGS__);
 #endif // LOG_USE_TIME
 #else
 #define LOG_VERBOSE(tag, message, ...)
@@ -154,12 +204,12 @@ static bool _logFilter(const char *tag)
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
 #if LOG_USE_TIME
 #define LOG_DEBUG(tag, message, ...) \
-    if (_logFilter(tag))             \
-        LOG_OUTPUT.printf(_LOG_TAG_TIME_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, tag, message), ##__VA_ARGS__);
+    _IF_LOG_FILTER                   \
+    _printf(_LOG_TAG_TIME_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, tag, message), ##__VA_ARGS__);
 #else
 #define LOG_DEBUG(tag, message, ...) \
-    if (_logFilter(tag))             \
-        LOG_OUTPUT.printf(_LOG_TAG_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, tag, message), ##__VA_ARGS__);
+    _IF_LOG_FILTER                   \
+    _printf(_LOG_TAG_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, tag, message), ##__VA_ARGS__);
 #endif
 #else
 #define LOG_DEBUG(tag, message, ...)
@@ -168,12 +218,12 @@ static bool _logFilter(const char *tag)
 #if LOG_LEVEL >= LOG_LEVEL_INFO
 #if LOG_USE_TIME
 #define LOG_INFO(tag, message, ...) \
-    if (_logFilter(tag))            \
-        LOG_OUTPUT.printf(_LOG_TAG_TIME_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, tag, message), ##__VA_ARGS__);
+    _IF_LOG_FILTER                  \
+    _printf(_LOG_TAG_TIME_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, tag, message), ##__VA_ARGS__);
 #else
 #define LOG_INFO(tag, message, ...) \
-    if (_logFilter(tag))            \
-        LOG_OUTPUT.printf(_LOG_TAG_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, tag, message), ##__VA_ARGS__);
+    _IF_LOG_FILTER                  \
+    _printf(_LOG_TAG_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, tag, message), ##__VA_ARGS__);
 #endif
 #else
 #define LOG_INFO(tag, message, ...)
@@ -182,12 +232,12 @@ static bool _logFilter(const char *tag)
 #if LOG_LEVEL >= LOG_LEVEL_WARNING
 #if LOG_USE_TIME
 #define LOG_WARNING(tag, message, ...) \
-    if (_logFilter(tag))               \
-        LOG_OUTPUT.printf(_LOG_TAG_TIME_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, tag, message), ##__VA_ARGS__);
+    _IF_LOG_FILTER                     \
+    _printf(_LOG_TAG_TIME_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, tag, message), ##__VA_ARGS__);
 #else
 #define LOG_WARNING(tag, message, ...) \
-    if (_logFilter(tag))               \
-        LOG_OUTPUT.printf(_LOG_TAG_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, tag, message), ##__VA_ARGS__);
+    _IF_LOG_FILTER                     \
+    _printf(_LOG_TAG_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, tag, message), ##__VA_ARGS__);
 #endif
 #else
 #define LOG_WARNING(tag, message, ...)
@@ -196,12 +246,12 @@ static bool _logFilter(const char *tag)
 #if LOG_LEVEL >= LOG_LEVEL_ERROR
 #if LOG_USE_TIME
 #define LOG_ERROR(tag, message, ...) \
-    if (_logFilter(tag))             \
-        LOG_OUTPUT.printf(_LOG_TAG_TIME_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, tag, message), ##__VA_ARGS__);
+    _IF_LOG_FILTER                   \
+    _printf(_LOG_TAG_TIME_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, tag, message), ##__VA_ARGS__);
 #else
 #define LOG_ERROR(tag, message, ...) \
-    if (_logFilter(tag))             \
-        LOG_OUTPUT.printf(_LOG_TAG_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, tag, message), ##__VA_ARGS__);
+    _IF_LOG_FILTER                   \
+    _printf(_LOG_TAG_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, tag, message), ##__VA_ARGS__);
 #endif
 #else
 #define LOG_ERROR(tag, message, ...)
@@ -211,9 +261,9 @@ static bool _logFilter(const char *tag)
 
 #if LOG_LEVEL >= LOG_LEVEL_VERBOSE
 #if LOG_USE_TIME
-#define LOG_V(message, ...) LOG_OUTPUT.printf(_LOG_TIME_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, message), ##__VA_ARGS__);
+#define LOG_V(message, ...) _printf(_LOG_TIME_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, message), ##__VA_ARGS__);
 #else
-#define LOG_V(message, ...) LOG_OUTPUT.printf(_LOG_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, message), ##__VA_ARGS__);
+#define LOG_V(message, ...) _printf(_LOG_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, message), ##__VA_ARGS__);
 #endif
 #else
 #define LOG_V(message, ...)
@@ -221,9 +271,9 @@ static bool _logFilter(const char *tag)
 
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
 #if LOG_USE_TIME
-#define LOG_D(message, ...) LOG_OUTPUT.printf(_LOG_TIME_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, message), ##__VA_ARGS__);
+#define LOG_D(message, ...) _printf(_LOG_TIME_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, message), ##__VA_ARGS__);
 #else
-#define LOG_D(message, ...) LOG_OUTPUT.printf(_LOG_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, message), ##__VA_ARGS__);
+#define LOG_D(message, ...) _printf(_LOG_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, message), ##__VA_ARGS__);
 #endif
 #else
 #define LOG_D(message, ...)
@@ -231,9 +281,9 @@ static bool _logFilter(const char *tag)
 
 #if LOG_LEVEL >= LOG_LEVEL_INFO
 #if LOG_USE_TIME
-#define LOG_I(message, ...) LOG_OUTPUT.printf(_LOG_TIME_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, message), ##__VA_ARGS__);
+#define LOG_I(message, ...) _printf(_LOG_TIME_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, message), ##__VA_ARGS__);
 #else
-#define LOG_I(message, ...) LOG_OUTPUT.printf(_LOG_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, message), ##__VA_ARGS__);
+#define LOG_I(message, ...) _printf(_LOG_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, message), ##__VA_ARGS__);
 #endif
 #else
 #define LOG_I(message, ...)
@@ -241,9 +291,9 @@ static bool _logFilter(const char *tag)
 
 #if LOG_LEVEL >= LOG_LEVEL_WARNING
 #if LOG_USE_TIME
-#define LOG_W(message, ...) LOG_OUTPUT.printf(_LOG_TIME_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, message), ##__VA_ARGS__);
+#define LOG_W(message, ...) _printf(_LOG_TIME_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, message), ##__VA_ARGS__);
 #else
-#define LOG_W(message, ...) LOG_OUTPUT.printf(_LOG_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, message), ##__VA_ARGS__);
+#define LOG_W(message, ...) _printf(_LOG_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, message), ##__VA_ARGS__);
 #endif
 #else
 #define LOG_W(message, ...)
@@ -251,9 +301,9 @@ static bool _logFilter(const char *tag)
 
 #if LOG_LEVEL >= LOG_LEVEL_ERROR
 #if LOG_USE_TIME
-#define LOG_E(message, ...) LOG_OUTPUT.printf(_LOG_TIME_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, message), ##__VA_ARGS__);
+#define LOG_E(message, ...) _printf(_LOG_TIME_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, message), ##__VA_ARGS__);
 #else
-#define LOG_E(message, ...) LOG_OUTPUT.printf(_LOG_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, message), ##__VA_ARGS__);
+#define LOG_E(message, ...) _printf(_LOG_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, message), ##__VA_ARGS__);
 #endif
 #else
 #define LOG_E(message, ...)
