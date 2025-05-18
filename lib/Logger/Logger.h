@@ -29,8 +29,9 @@
 #define LOG_FILENAME_DISABLE 0
 #define LOG_FILENAME_ENABLE 1
 
-#define LOG_TAG_TYPE_SHORT 0
-#define LOG_TAG_TYPE_LONG 1
+#define LOG_TAG_TYPE_SINGLE 0
+#define LOG_TAG_TYPE_SHORT 1
+#define LOG_TAG_TYPE_FULL 2
 
 #define LOG_TYPE_PRINTF 0
 #define LOG_TYPE_STD_FORMAT 1
@@ -61,7 +62,7 @@
 #endif
 
 #ifndef LOG_TAG_TYPE
-#define LOG_TAG_TYPE LOG_TAG_TYPE_LONG
+#define LOG_TAG_TYPE LOG_TAG_TYPE_SHORT
 #endif
 
 #ifndef LOG_COLORS
@@ -84,7 +85,7 @@
 static_assert(LOG_LEVEL >= LOG_LEVEL_DISABLE && LOG_LEVEL <= LOG_LEVEL_VERBOSE, "LOG_LEVEL must be between LOG_LEVEL_DISABLE and LOG_LEVEL_VERBOSE");
 static_assert(LOG_FILTER >= LOG_FILTER_DISABLE && LOG_FILTER <= LOG_FILTER_INCLUDE, "LOG_FILTER must be between LOG_FILTER_DISABLE and LOG_FILTER_INCLUDE");
 static_assert(LOG_TIME >= LOG_TIME_DISABLE && LOG_TIME <= LOG_TIME_HHHHMMSSMS, "LOG_TIME must be between LOG_TIME_DISABLE and LOG_TIME_HHHHMMSSMS");
-static_assert(LOG_TAG_TYPE == LOG_TAG_TYPE_SHORT || LOG_TAG_TYPE == LOG_TAG_TYPE_LONG, "LOG_TAG_TYPE must be either LOG_TAG_TYPE_SHORT or LOG_TAG_TYPE_LONG");
+static_assert(LOG_TAG_TYPE == LOG_TAG_TYPE_SINGLE || LOG_TAG_TYPE == LOG_TAG_TYPE_SHORT || LOG_TAG_TYPE == LOG_TAG_TYPE_FULL, "LOG_TAG_TYPE must be either LOG_TAG_TYPE_SINGLE, LOG_TAG_TYPE_SHORT or LOG_TAG_TYPE_LONG");
 static_assert(LOG_COLORS == LOG_COLORS_DISABLE || LOG_COLORS == LOG_COLORS_ENABLE, "LOG_COLORS must be either LOG_COLORS_DISABLE or LOG_COLORS_ENABLE");
 static_assert(LOG_PRINT_TYPE == LOG_TYPE_PRINTF || LOG_PRINT_TYPE == LOG_TYPE_STD_FORMAT, "LOG_PRINT_TYPE must be either LOG_TYPE_PRINTF or LOG_TYPE_STD_FORMAT");
 #endif
@@ -122,10 +123,12 @@ static_assert(LOG_PRINT_TYPE == LOG_TYPE_PRINTF || LOG_PRINT_TYPE == LOG_TYPE_ST
 #define _LOG_RESET_COLOR ""
 #endif // LOG_COLORS == LOG_COLORS_ENABLE
 
-#if LOG_TAG_TYPE == LOG_TAG_TYPE_SHORT
+#if LOG_TAG_TYPE == LOG_TAG_TYPE_SINGLE
 static const char *_logLevelText[] = {"E", "W", "I", "D", "V"};
-#else
+#elif LOG_TAG_TYPE == LOG_TAG_TYPE_SHORT
 static const char *_logLevelText[] = {"EROR", "WARN", "INFO", "DBUG", "VERB"};
+#else
+static const char *_logLevelText[] = {"ERROR", "WARNING", "INFO", "DEBUG", "VERBOSE"};
 #endif // LOG_TAG == LOG_TAG_SHORT
 
 #if LOG_LEVEL > LOG_LEVEL_DISABLE
@@ -310,12 +313,12 @@ static_assert(__cplusplus >= 202002L, "LOG_TYPE_STD_FORMAT requires C++20 or lat
  *-------------------------------------------------------------------------------------*/
 
 #if LOG_LEVEL >= LOG_LEVEL_VERBOSE
-#define LOG_VERBOSE(tag, message, ...)                                                        \
+#define LOG_VERB(tag, message, ...)                                                           \
     _IF_LOG_FILTER_BEGIN(tag)                                                                 \
     LOG_PRINT(_LOG_TAG_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
-#define LOG_VERBOSE(tag, message, ...)
+#define LOG_VERB(tag, message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
@@ -337,12 +340,12 @@ static_assert(__cplusplus >= 202002L, "LOG_TYPE_STD_FORMAT requires C++20 or lat
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_WARNING
-#define LOG_WARNING(tag, message, ...)                                                        \
+#define LOG_WARN(tag, message, ...)                                                           \
     _IF_LOG_FILTER_BEGIN(tag)                                                                 \
     LOG_PRINT(_LOG_TAG_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
-#define LOG_WARNING(tag, message, ...)
+#define LOG_WARN(tag, message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_ERROR
