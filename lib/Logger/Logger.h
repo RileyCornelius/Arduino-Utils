@@ -93,14 +93,6 @@ static_assert(LOG_PRINT_TYPE == LOG_TYPE_PRINTF || LOG_PRINT_TYPE == LOG_TYPE_ST
  * Logger Private Functions
  *-------------------------------------------------------------------------------------*/
 
-#if LOG_TAG_TYPE == LOG_TAG_TYPE_SINGLE
-static const char *_logLevelText[] = {"E", "W", "I", "D", "V"};
-#elif LOG_TAG_TYPE == LOG_TAG_TYPE_SHORT
-static const char *_logLevelText[] = {"EROR", "WARN", "INFO", "DBUG", "VERB"};
-#else
-static const char *_logLevelText[] = {"ERROR", "WARNING", "INFO", "DEBUG", "VERBOSE"};
-#endif // LOG_TAG_TYPE == LOG_TAG_TYPE_SINGLE
-
 #if LOG_LEVEL > LOG_LEVEL_DISABLE
 static void _vprintf(const char *format, va_list arg)
 {
@@ -260,29 +252,51 @@ const char *pathToName(const char *path)
 #define _IF_LOG_FILTER_END
 #endif // LOG_LOG_FILTER != LOG_FILTER_DISABLE
 
+// Log level text
+
+#if LOG_TAG_TYPE == LOG_TAG_TYPE_SINGLE
+#define _LOG_LEVEL_VERBOSE_TEXT "[V]"
+#define _LOG_LEVEL_DEBUG_TEXT "[D]"
+#define _LOG_LEVEL_INFO_TEXT "[I]"
+#define _LOG_LEVEL_WARNING_TEXT "[W]"
+#define _LOG_LEVEL_ERROR_TEXT "[E]"
+#elif LOG_TAG_TYPE == LOG_TAG_TYPE_SHORT
+#define _LOG_LEVEL_VERBOSE_TEXT "[VERB]"
+#define _LOG_LEVEL_DEBUG_TEXT "[DBUG]"
+#define _LOG_LEVEL_INFO_TEXT "[INFO]"
+#define _LOG_LEVEL_WARNING_TEXT "[WARN]"
+#define _LOG_LEVEL_ERROR_TEXT "[EROR]"
+#else
+#define _LOG_LEVEL_VERBOSE_TEXT "[VERBOSE]"
+#define _LOG_LEVEL_DEBUG_TEXT "[DEBUG]"
+#define _LOG_LEVEL_INFO_TEXT "[INFO]"
+#define _LOG_LEVEL_WARNING_TEXT "[WARNING]"
+#define _LOG_LEVEL_ERROR_TEXT "[ERROR]"
+#endif // LOG_TAG_TYPE == LOG_TAG_TYPE_SINGLE
+
 // Preamble format
 
 #if LOG_PRINT_TYPE == LOG_TYPE_PRINTF
-#define __LOG_TAG_FORMAT(loglevel, color, tag, format) color "[%s][%s] " format _LOG_RESET_COLOR LOG_EOL, _logLevelText[loglevel - 1], tag
-#define __LOG_TAG_TIME_FORMAT(loglevel, color, tag, format) color "[%s][%s][%s] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), _logLevelText[loglevel - 1], tag
-#define __LOG_TAG_FILE_FORMAT(loglevel, color, tag, format) color "[%s][%s][%s:%s] " format _LOG_RESET_COLOR LOG_EOL, _logLevelText[loglevel - 1], tag, pathToName(__FILE__), __LINE__
-#define __LOG_TAG_TIME_FILE_FORMAT(loglevel, color, tag, format) color "[%s][%s][%s][%s:%s] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), _logLevelText[loglevel - 1], tag, pathToName(__FILE__), __LINE__
+#define __LOG_TAG_FORMAT(loglevel, color, tag, format) color loglevel "[%s] " format _LOG_RESET_COLOR LOG_EOL, tag
+#define __LOG_TAG_TIME_FORMAT(loglevel, color, tag, format) color loglevel "[%s][%s] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), tag
+#define __LOG_TAG_FILE_FORMAT(loglevel, color, tag, format) color loglevel "[%s][%s:%s] " format _LOG_RESET_COLOR LOG_EOL, tag, pathToName(__FILE__), __LINE__
+#define __LOG_TAG_TIME_FILE_FORMAT(loglevel, color, tag, format) color loglevel "[%s][%s][%s:%s] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), tag, pathToName(__FILE__), __LINE__
 
-#define __LOG_FORMAT(loglevel, color, format) color "[%s] " format _LOG_RESET_COLOR LOG_EOL, _logLevelText[loglevel - 1]
-#define __LOG_TIME_FORMAT(loglevel, color, format) color "[%s][%s] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), _logLevelText[loglevel - 1]
-#define __LOG_FILE_FORMAT(loglevel, color, format) color "[%s][%s][%s:%s] " format _LOG_RESET_COLOR LOG_EOL, _logLevelText[loglevel - 1], pathToName(__FILE__), __LINE__
-#define __LOG_TIME_FILE_FORMAT(loglevel, color, format) color "[%s][%s][%s:%s] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), _logLevelText[loglevel - 1], pathToName(__FILE__), __LINE__
+#define __LOG_FORMAT(loglevel, color, format) color loglevel " " format _LOG_RESET_COLOR LOG_EOL
+#define __LOG_TIME_FORMAT(loglevel, color, format) color loglevel "[%s] " format _LOG_RESET_COLOR LOG_EOL, _formatTime()
+#define __LOG_FILE_FORMAT(loglevel, color, format) color loglevel "[%s][%s:%s] " format _LOG_RESET_COLOR LOG_EOL, pathToName(__FILE__), __LINE__
+#define __LOG_TIME_FILE_FORMAT(loglevel, color, format) color loglevel "[%s][%s:%s] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), pathToName(__FILE__), __LINE__
 
 #elif (LOG_PRINT_TYPE == LOG_TYPE_STD_FORMAT)
-#define __LOG_TAG_FORMAT(loglevel, color, tag, format) color "[{}][{}] " format _LOG_RESET_COLOR LOG_EOL, _logLevelText[loglevel - 1], tag
-#define __LOG_TAG_TIME_FORMAT(loglevel, color, tag, format) color "[{}][{}][{}] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), _logLevelText[loglevel - 1], tag
-#define __LOG_TAG_FILE_FORMAT(loglevel, color, tag, format) color "[{}][{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _logLevelText[loglevel - 1], tag, pathToName(__FILE__), __LINE__
-#define __LOG_TAG_TIME_FILE_FORMAT(loglevel, color, tag, format) color "[{}][{}][{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), _logLevelText[loglevel - 1], tag, pathToName(__FILE__), __LINE__
+#define __LOG_TAG_FORMAT(loglevel, color, tag, format) color loglevel "[{}] " format _LOG_RESET_COLOR LOG_EOL, tag
+#define __LOG_TAG_TIME_FORMAT(loglevel, color, tag, format) color loglevel "[{}][{}] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), tag
+#define __LOG_TAG_FILE_FORMAT(loglevel, color, tag, format) color loglevel "[{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, tag, pathToName(__FILE__), __LINE__
+#define __LOG_TAG_TIME_FILE_FORMAT(loglevel, color, tag, format) color loglevel "[{}][{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), tag, pathToName(__FILE__), __LINE__
 
-#define __LOG_FORMAT(loglevel, color, format) color "[{}] " format _LOG_RESET_COLOR LOG_EOL, _logLevelText[loglevel - 1]
-#define __LOG_TIME_FORMAT(loglevel, color, format) color "[{}][{}] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), _logLevelText[loglevel - 1]
-#define __LOG_FILE_FORMAT(loglevel, color, format) color "[{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _logLevelText[loglevel - 1], pathToName(__FILE__), __LINE__
-#define __LOG_TIME_FILE_FORMAT(loglevel, color, format) color "[{}][{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), _logLevelText[loglevel - 1], pathToName(__FILE__), __LINE__
+#define __LOG_FORMAT(loglevel, color, format) color loglevel " " format _LOG_RESET_COLOR LOG_EOL
+#define __LOG_TIME_FORMAT(loglevel, color, format) color loglevel "[{}] " format _LOG_RESET_COLOR LOG_EOL, _formatTime()
+#define __LOG_FILE_FORMAT(loglevel, color, format) color loglevel "[{}:{}] " format _LOG_RESET_COLOR LOG_EOL, pathToName(__FILE__), __LINE__
+#define __LOG_TIME_FILE_FORMAT(loglevel, color, format) color loglevel "[{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), pathToName(__FILE__), __LINE__
 #endif // LOG_PRINT_TYPE == LOG_TYPE_PRINTF
 
 // Format without tag
@@ -328,31 +342,31 @@ static_assert(__cplusplus >= 202002L, "LOG_TYPE_STD_FORMAT requires C++20 or lat
 // Log without tag
 
 #if LOG_LEVEL >= LOG_LEVEL_VERBOSE
-#define LOG_V(message, ...) LOG_PRINT(_LOG_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, message), ##__VA_ARGS__);
+#define LOG_V(message, ...) LOG_PRINT(_LOG_FORMAT(_LOG_LEVEL_VERBOSE_TEXT, _LOG_COLOR_V, message), ##__VA_ARGS__);
 #else
 #define LOG_V(message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
-#define LOG_D(message, ...) LOG_PRINT(_LOG_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, message), ##__VA_ARGS__);
+#define LOG_D(message, ...) LOG_PRINT(_LOG_FORMAT(_LOG_LEVEL_DEBUG_TEXT _LOG_COLOR_D, message), ##__VA_ARGS__);
 #else
 #define LOG_D(message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_INFO
-#define LOG_I(message, ...) LOG_PRINT(_LOG_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, message), ##__VA_ARGS__);
+#define LOG_I(message, ...) LOG_PRINT(_LOG_FORMAT(_LOG_LEVEL_INFO_TEXT, LOG_COLOR_I, message), ##__VA_ARGS__);
 #else
 #define LOG_I(message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_WARNING
-#define LOG_W(message, ...) LOG_PRINT(_LOG_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, message), ##__VA_ARGS__);
+#define LOG_W(message, ...) LOG_PRINT(_LOG_FORMAT(_LOG_LEVEL_WARNING_TEXT, _LOG_COLOR_W, message), ##__VA_ARGS__);
 #else
 #define LOG_W(message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_ERROR
-#define LOG_E(message, ...) LOG_PRINT(_LOG_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, message), ##__VA_ARGS__);
+#define LOG_E(message, ...) LOG_PRINT(_LOG_FORMAT(_LOG_LEVEL_ERROR_TEXT, _LOG_COLOR_E, message), ##__VA_ARGS__);
 #else
 #define LOG_E(message, ...)
 #endif
@@ -360,45 +374,45 @@ static_assert(__cplusplus >= 202002L, "LOG_TYPE_STD_FORMAT requires C++20 or lat
 // Log with tag
 
 #if LOG_LEVEL >= LOG_LEVEL_VERBOSE
-#define LOG_VERB(tag, message, ...)                                                           \
-    _IF_LOG_FILTER_BEGIN(tag)                                                                 \
-    LOG_PRINT(_LOG_TAG_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, tag, message), ##__VA_ARGS__); \
+#define LOG_VERB(tag, message, ...)                                                                 \
+    _IF_LOG_FILTER_BEGIN(tag)                                                                       \
+    LOG_PRINT(_LOG_TAG_FORMAT(_LOG_LEVEL_VERBOSE_TEXT, _LOG_COLOR_V, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
 #define LOG_VERB(tag, message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
-#define LOG_DEBUG(tag, message, ...)                                                        \
-    _IF_LOG_FILTER_BEGIN(tag)                                                               \
-    LOG_PRINT(_LOG_TAG_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, tag, message), ##__VA_ARGS__); \
+#define LOG_DEBUG(tag, message, ...)                                                              \
+    _IF_LOG_FILTER_BEGIN(tag)                                                                     \
+    LOG_PRINT(_LOG_TAG_FORMAT(_LOG_LEVEL_DEBUG_TEXT, _LOG_COLOR_D, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
 #define LOG_DEBUG(tag, message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_INFO
-#define LOG_INFO(tag, message, ...)                                                        \
-    _IF_LOG_FILTER_BEGIN(tag)                                                              \
-    LOG_PRINT(_LOG_TAG_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, tag, message), ##__VA_ARGS__); \
+#define LOG_INFO(tag, message, ...)                                                              \
+    _IF_LOG_FILTER_BEGIN(tag)                                                                    \
+    LOG_PRINT(_LOG_TAG_FORMAT(_LOG_LEVEL_INFO_TEXT, _LOG_COLOR_I, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
 #define LOG_INFO(tag, message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_WARNING
-#define LOG_WARN(tag, message, ...)                                                           \
-    _IF_LOG_FILTER_BEGIN(tag)                                                                 \
-    LOG_PRINT(_LOG_TAG_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, tag, message), ##__VA_ARGS__); \
+#define LOG_WARN(tag, message, ...)                                                                 \
+    _IF_LOG_FILTER_BEGIN(tag)                                                                       \
+    LOG_PRINT(_LOG_TAG_FORMAT(_LOG_LEVEL_WARNING_TEXT, _LOG_COLOR_W, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
 #define LOG_WARN(tag, message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_ERROR
-#define LOG_ERROR(tag, message, ...)                                                        \
-    _IF_LOG_FILTER_BEGIN(tag)                                                               \
-    LOG_PRINT(_LOG_TAG_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, tag, message), ##__VA_ARGS__); \
+#define LOG_ERROR(tag, message, ...)                                                              \
+    _IF_LOG_FILTER_BEGIN(tag)                                                                     \
+    LOG_PRINT(_LOG_TAG_FORMAT(_LOG_LEVEL_ERROR_TEXT, _LOG_COLOR_E, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
 #define LOG_ERROR(tag, message, ...)
