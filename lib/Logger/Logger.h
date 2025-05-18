@@ -13,9 +13,9 @@
 #define LOG_LEVEL_DEBUG 4
 #define LOG_LEVEL_VERBOSE 5
 
-#define LOG_FILTER_DISABLE 0
-#define LOG_FILTER_EXCLUDE 1
-#define LOG_FILTER_INCLUDE 2
+#define LOG_FILTER_DISABLE -1
+#define LOG_FILTER_EXCLUDE 0
+#define LOG_FILTER_INCLUDE 1
 
 #define LOG_TIME_DISABLE 0
 #define LOG_TIME_MICROS 1
@@ -29,8 +29,8 @@
 #define LOG_FILENAME_DISABLE 0
 #define LOG_FILENAME_ENABLE 1
 
-#define LOG_TAG_SHORT 0
-#define LOG_TAG_LONG 1
+#define LOG_TAG_TYPE_SHORT 0
+#define LOG_TAG_TYPE_LONG 1
 
 #define LOG_TYPE_PRINTF 0
 #define LOG_TYPE_STD_FORMAT 1
@@ -61,7 +61,7 @@
 #endif
 
 #ifndef LOG_TAG_TYPE
-#define LOG_TAG_TYPE LOG_TAG_SHORT
+#define LOG_TAG_TYPE LOG_TAG_TYPE_LONG
 #endif
 
 #ifndef LOG_COLORS
@@ -84,7 +84,7 @@
 static_assert(LOG_LEVEL >= LOG_LEVEL_DISABLE && LOG_LEVEL <= LOG_LEVEL_VERBOSE, "LOG_LEVEL must be between LOG_LEVEL_DISABLE and LOG_LEVEL_VERBOSE");
 static_assert(LOG_FILTER >= LOG_FILTER_DISABLE && LOG_FILTER <= LOG_FILTER_INCLUDE, "LOG_FILTER must be between LOG_FILTER_DISABLE and LOG_FILTER_INCLUDE");
 static_assert(LOG_TIME >= LOG_TIME_DISABLE && LOG_TIME <= LOG_TIME_HHHHMMSSMS, "LOG_TIME must be between LOG_TIME_DISABLE and LOG_TIME_HHHHMMSSMS");
-static_assert(LOG_TAG_TYPE == LOG_TAG_TYPE || LOG_TAG_TYPE == LOG_TAG_LONG, "LOG_TAG_SHORT must be either LOG_TAG_SHORT or LOG_TAG_LONG");
+static_assert(LOG_TAG_TYPE == LOG_TAG_TYPE_SHORT || LOG_TAG_TYPE == LOG_TAG_TYPE_LONG, "LOG_TAG_TYPE must be either LOG_TAG_TYPE_SHORT or LOG_TAG_TYPE_LONG");
 static_assert(LOG_COLORS == LOG_COLORS_DISABLE || LOG_COLORS == LOG_COLORS_ENABLE, "LOG_COLORS must be either LOG_COLORS_DISABLE or LOG_COLORS_ENABLE");
 static_assert(LOG_PRINT_TYPE == LOG_TYPE_PRINTF || LOG_PRINT_TYPE == LOG_TYPE_STD_FORMAT, "LOG_PRINT_TYPE must be either LOG_TYPE_PRINTF or LOG_TYPE_STD_FORMAT");
 #endif
@@ -122,7 +122,7 @@ static_assert(LOG_PRINT_TYPE == LOG_TYPE_PRINTF || LOG_PRINT_TYPE == LOG_TYPE_ST
 #define _LOG_RESET_COLOR ""
 #endif // LOG_COLORS == LOG_COLORS_ENABLE
 
-#if LOG_TAG == LOG_TAG_SHORT
+#if LOG_TAG_TYPE == LOG_TAG_TYPE_SHORT
 static const char *_logLevelText[] = {"E", "W", "I", "D", "V"};
 #else
 static const char *_logLevelText[] = {"EROR", "WARN", "INFO", "DBUG", "VERB"};
@@ -199,6 +199,7 @@ static const char *_formatTime()
 }
 #endif // LOG_TIME != LOG_TIME_DISABLE
 
+#if LOG_LOG_FILTER != LOG_FILTER_DISABLE
 static bool _logFilter(const char *tag)
 {
     static const char *filterList[] = LOG_FILTER_LIST;
@@ -215,16 +216,7 @@ static bool _logFilter(const char *tag)
     }
     return LOG_FILTER ? inFilter : !inFilter; // INCLUDE or EXCLUDE
 }
-
-#if LOG_USE_LOG_FILTER != LOG_FILTER_DISABLE
-#define _IF_LOG_FILTER_BEGIN \
-    if (_logFilter(tag))     \
-    {
-#define _IF_LOG_FILTER_END }
-#else
-#define _IF_LOG_FILTER_BEGIN
-#define _IF_LOG_FILTER_END
-#endif // LOG_USE_LOG_FILTER
+#endif // LOG_LOG_FILTER != LOG_FILTER_DISABLE
 
 #if LOG_FILENAME == LOG_FILENAME_ENABLE
 const char *pathToName(const char *path)
@@ -249,6 +241,16 @@ const char *pathToName(const char *path)
     return path + pos;
 }
 #endif // LOG_FILENAME == LOG_FILENAME_ENABLE
+
+#if LOG_LOG_FILTER != LOG_FILTER_DISABLE
+#define _IF_LOG_FILTER_BEGIN(tag) \
+    if (_logFilter(tag))          \
+    {
+#define _IF_LOG_FILTER_END }
+#else
+#define _IF_LOG_FILTER_BEGIN
+#define _IF_LOG_FILTER_END
+#endif // LOG_LOG_FILTER != LOG_FILTER_DISABLE
 
 #if LOG_PRINT_TYPE == LOG_TYPE_PRINTF
 #define LOG_PRINT(format, ...) _printf(format, ##__VA_ARGS__)
@@ -309,7 +311,7 @@ static_assert(__cplusplus >= 202002L, "LOG_TYPE_STD_FORMAT requires C++20 or lat
 
 #if LOG_LEVEL >= LOG_LEVEL_VERBOSE
 #define LOG_VERBOSE(tag, message, ...)                                                        \
-    _IF_LOG_FILTER_BEGIN                                                                      \
+    _IF_LOG_FILTER_BEGIN(tag)                                                                 \
     LOG_PRINT(_LOG_TAG_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
@@ -318,7 +320,7 @@ static_assert(__cplusplus >= 202002L, "LOG_TYPE_STD_FORMAT requires C++20 or lat
 
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
 #define LOG_DEBUG(tag, message, ...)                                                        \
-    _IF_LOG_FILTER_BEGIN                                                                    \
+    _IF_LOG_FILTER_BEGIN(tag)                                                               \
     LOG_PRINT(_LOG_TAG_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
@@ -327,7 +329,7 @@ static_assert(__cplusplus >= 202002L, "LOG_TYPE_STD_FORMAT requires C++20 or lat
 
 #if LOG_LEVEL >= LOG_LEVEL_INFO
 #define LOG_INFO(tag, message, ...)                                                        \
-    _IF_LOG_FILTER_BEGIN                                                                   \
+    _IF_LOG_FILTER_BEGIN(tag)                                                              \
     LOG_PRINT(_LOG_TAG_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
@@ -336,7 +338,7 @@ static_assert(__cplusplus >= 202002L, "LOG_TYPE_STD_FORMAT requires C++20 or lat
 
 #if LOG_LEVEL >= LOG_LEVEL_WARNING
 #define LOG_WARNING(tag, message, ...)                                                        \
-    _IF_LOG_FILTER_BEGIN                                                                      \
+    _IF_LOG_FILTER_BEGIN(tag)                                                                 \
     LOG_PRINT(_LOG_TAG_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
@@ -345,7 +347,7 @@ static_assert(__cplusplus >= 202002L, "LOG_TYPE_STD_FORMAT requires C++20 or lat
 
 #if LOG_LEVEL >= LOG_LEVEL_ERROR
 #define LOG_ERROR(tag, message, ...)                                                        \
-    _IF_LOG_FILTER_BEGIN                                                                    \
+    _IF_LOG_FILTER_BEGIN(tag)                                                               \
     LOG_PRINT(_LOG_TAG_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
