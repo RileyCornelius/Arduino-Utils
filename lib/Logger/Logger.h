@@ -40,9 +40,8 @@
  * Logger Default Settings
  *-------------------------------------------------------------------------------------*/
 
-// If LOG_LEVEL is not defined by the user, it defaults to LOG_LEVEL_DEBUG
 #ifndef LOG_LEVEL
-#define LOG_LEVEL LOG_LEVEL_DEBUG
+#define LOG_LEVEL LOG_LEVEL_DEBUG // If LOG_LEVEL is not defined by the user, it defaults to LOG_LEVEL_DEBUG
 #endif
 
 #ifndef LOG_OUTPUT
@@ -77,51 +76,22 @@
 #define LOG_PRINT_TYPE LOG_TYPE_PRINTF
 #endif
 
+#define LOG_EOL "\r\n"
+
 /**--------------------------------------------------------------------------------------
  * Logger Assertions
  *-------------------------------------------------------------------------------------*/
 
-#if __cplusplus >= 201103L
 static_assert(LOG_LEVEL >= LOG_LEVEL_DISABLE && LOG_LEVEL <= LOG_LEVEL_VERBOSE, "LOG_LEVEL must be between LOG_LEVEL_DISABLE and LOG_LEVEL_VERBOSE");
 static_assert(LOG_FILTER >= LOG_FILTER_DISABLE && LOG_FILTER <= LOG_FILTER_INCLUDE, "LOG_FILTER must be between LOG_FILTER_DISABLE and LOG_FILTER_INCLUDE");
 static_assert(LOG_TIME >= LOG_TIME_DISABLE && LOG_TIME <= LOG_TIME_HHHHMMSSMS, "LOG_TIME must be between LOG_TIME_DISABLE and LOG_TIME_HHHHMMSSMS");
 static_assert(LOG_TAG_TYPE == LOG_TAG_TYPE_SINGLE || LOG_TAG_TYPE == LOG_TAG_TYPE_SHORT || LOG_TAG_TYPE == LOG_TAG_TYPE_FULL, "LOG_TAG_TYPE must be either LOG_TAG_TYPE_SINGLE, LOG_TAG_TYPE_SHORT or LOG_TAG_TYPE_LONG");
 static_assert(LOG_COLORS == LOG_COLORS_DISABLE || LOG_COLORS == LOG_COLORS_ENABLE, "LOG_COLORS must be either LOG_COLORS_DISABLE or LOG_COLORS_ENABLE");
 static_assert(LOG_PRINT_TYPE == LOG_TYPE_PRINTF || LOG_PRINT_TYPE == LOG_TYPE_STD_FORMAT, "LOG_PRINT_TYPE must be either LOG_TYPE_PRINTF or LOG_TYPE_STD_FORMAT");
-#endif
 
 /**--------------------------------------------------------------------------------------
- * Logger Private Functions and Macros
+ * Logger Private Functions
  *-------------------------------------------------------------------------------------*/
-
-#define LOG_EOL "\r\n"
-
-#if LOG_COLORS == LOG_COLORS_ENABLE
-#define _LOG_COLOR_BLACK "30"
-#define _LOG_COLOR_RED "31"    // ERROR
-#define _LOG_COLOR_GREEN "32"  // INFO
-#define _LOG_COLOR_YELLOW "33" // WARNING
-#define _LOG_COLOR_BLUE "34"
-#define _LOG_COLOR_MAGENTA "35"
-#define _LOG_COLOR_CYAN "36" // DEBUG
-#define _LOG_COLOR_GRAY "37" // VERBOSE
-#define _LOG_COLOR_WHITE "38"
-#define _LOG_COLOR(COLOR) "\033[0;" COLOR "m"
-#define _LOG_BOLD(COLOR) "\033[1;" COLOR "m"
-#define _LOG_RESET_COLOR "\033[0m"
-#define _LOG_COLOR_E _LOG_COLOR(_LOG_COLOR_RED)
-#define _LOG_COLOR_W _LOG_COLOR(_LOG_COLOR_YELLOW)
-#define _LOG_COLOR_I _LOG_COLOR(_LOG_COLOR_GREEN)
-#define _LOG_COLOR_D _LOG_COLOR(_LOG_COLOR_CYAN)
-#define _LOG_COLOR_V _LOG_COLOR(_LOG_COLOR_GRAY)
-#else
-#define _LOG_COLOR_E ""
-#define _LOG_COLOR_W ""
-#define _LOG_COLOR_I ""
-#define _LOG_COLOR_D ""
-#define _LOG_COLOR_V ""
-#define _LOG_RESET_COLOR ""
-#endif // LOG_COLORS == LOG_COLORS_ENABLE
 
 #if LOG_TAG_TYPE == LOG_TAG_TYPE_SINGLE
 static const char *_logLevelText[] = {"E", "W", "I", "D", "V"};
@@ -129,7 +99,7 @@ static const char *_logLevelText[] = {"E", "W", "I", "D", "V"};
 static const char *_logLevelText[] = {"EROR", "WARN", "INFO", "DBUG", "VERB"};
 #else
 static const char *_logLevelText[] = {"ERROR", "WARNING", "INFO", "DEBUG", "VERBOSE"};
-#endif // LOG_TAG == LOG_TAG_SHORT
+#endif // LOG_TAG_TYPE == LOG_TAG_TYPE_SINGLE
 
 #if LOG_LEVEL > LOG_LEVEL_DISABLE
 static void _vprintf(const char *format, va_list arg)
@@ -245,6 +215,41 @@ const char *pathToName(const char *path)
 }
 #endif // LOG_FILENAME == LOG_FILENAME_ENABLE
 
+/**--------------------------------------------------------------------------------------
+ * Logger Private Macros
+ *-------------------------------------------------------------------------------------*/
+
+// Colors
+
+#if LOG_COLORS == LOG_COLORS_ENABLE
+#define _LOG_COLOR_BLACK "30"
+#define _LOG_COLOR_RED "31"    // ERROR
+#define _LOG_COLOR_GREEN "32"  // INFO
+#define _LOG_COLOR_YELLOW "33" // WARNING
+#define _LOG_COLOR_BLUE "34"
+#define _LOG_COLOR_MAGENTA "35"
+#define _LOG_COLOR_CYAN "36" // DEBUG
+#define _LOG_COLOR_GRAY "37" // VERBOSE
+#define _LOG_COLOR_WHITE "38"
+#define _LOG_COLOR(COLOR) "\033[0;" COLOR "m"
+#define _LOG_BOLD(COLOR) "\033[1;" COLOR "m"
+#define _LOG_RESET_COLOR "\033[0m"
+#define _LOG_COLOR_E _LOG_COLOR(_LOG_COLOR_RED)
+#define _LOG_COLOR_W _LOG_COLOR(_LOG_COLOR_YELLOW)
+#define _LOG_COLOR_I _LOG_COLOR(_LOG_COLOR_GREEN)
+#define _LOG_COLOR_D _LOG_COLOR(_LOG_COLOR_CYAN)
+#define _LOG_COLOR_V _LOG_COLOR(_LOG_COLOR_GRAY)
+#else
+#define _LOG_COLOR_E ""
+#define _LOG_COLOR_W ""
+#define _LOG_COLOR_I ""
+#define _LOG_COLOR_D ""
+#define _LOG_COLOR_V ""
+#define _LOG_RESET_COLOR ""
+#endif // LOG_COLORS == LOG_COLORS_ENABLE
+
+// Filter
+
 #if LOG_LOG_FILTER != LOG_FILTER_DISABLE
 #define _IF_LOG_FILTER_BEGIN(tag) \
     if (_logFilter(tag))          \
@@ -255,10 +260,9 @@ const char *pathToName(const char *path)
 #define _IF_LOG_FILTER_END
 #endif // LOG_LOG_FILTER != LOG_FILTER_DISABLE
 
-#if LOG_PRINT_TYPE == LOG_TYPE_PRINTF
-#define LOG_PRINT(format, ...) _printf(format, ##__VA_ARGS__)
-#define LOG_PRINTLN(format, ...) _printf(format LOG_EOL, ##__VA_ARGS__)
+// Preamble format
 
+#if LOG_PRINT_TYPE == LOG_TYPE_PRINTF
 #define __LOG_TAG_FORMAT(loglevel, color, tag, format) color "[%s][%s] " format _LOG_RESET_COLOR LOG_EOL, _logLevelText[loglevel - 1], tag
 #define __LOG_TAG_TIME_FORMAT(loglevel, color, tag, format) color "[%s][%s][%s] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), _logLevelText[loglevel - 1], tag
 #define __LOG_TAG_FILE_FORMAT(loglevel, color, tag, format) color "[%s][%s][%s:%s] " format _LOG_RESET_COLOR LOG_EOL, _logLevelText[loglevel - 1], tag, pathToName(__FILE__), __LINE__
@@ -270,12 +274,6 @@ const char *pathToName(const char *path)
 #define __LOG_TIME_FILE_FORMAT(loglevel, color, format) color "[%s][%s][%s:%s] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), _logLevelText[loglevel - 1], pathToName(__FILE__), __LINE__
 
 #elif (LOG_PRINT_TYPE == LOG_TYPE_STD_FORMAT)
-static_assert(__cplusplus >= 202002L, "LOG_TYPE_STD_FORMAT requires C++20 or later");
-
-#include <format>
-#define LOG_PRINT(msg, ...) LOG_OUTPUT.print(std::format(msg, ##__VA_ARGS__).c_str());
-#define LOG_PRINTLN(msg, ...) LOG_OUTPUT.print(std::format(msg LOG_EOL, ##__VA_ARGS__).c_str());
-
 #define __LOG_TAG_FORMAT(loglevel, color, tag, format) color "[{}][{}] " format _LOG_RESET_COLOR LOG_EOL, _logLevelText[loglevel - 1], tag
 #define __LOG_TAG_TIME_FORMAT(loglevel, color, tag, format) color "[{}][{}][{}] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), _logLevelText[loglevel - 1], tag
 #define __LOG_TAG_FILE_FORMAT(loglevel, color, tag, format) color "[{}][{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _logLevelText[loglevel - 1], tag, pathToName(__FILE__), __LINE__
@@ -285,8 +283,9 @@ static_assert(__cplusplus >= 202002L, "LOG_TYPE_STD_FORMAT requires C++20 or lat
 #define __LOG_TIME_FORMAT(loglevel, color, format) color "[{}][{}] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), _logLevelText[loglevel - 1]
 #define __LOG_FILE_FORMAT(loglevel, color, format) color "[{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _logLevelText[loglevel - 1], pathToName(__FILE__), __LINE__
 #define __LOG_TIME_FILE_FORMAT(loglevel, color, format) color "[{}][{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), _logLevelText[loglevel - 1], pathToName(__FILE__), __LINE__
-
 #endif // LOG_PRINT_TYPE == LOG_TYPE_PRINTF
+
+// Format without tag
 
 #if LOG_TIME != LOG_TIME_DISABLE && LOG_FILENAME != LOG_FILENAME_DISABLE
 #define _LOG_FORMAT(level, color, msg) __LOG_TIME_FILE_FORMAT(level, color, msg)
@@ -297,6 +296,8 @@ static_assert(__cplusplus >= 202002L, "LOG_TYPE_STD_FORMAT requires C++20 or lat
 #else
 #define _LOG_FORMAT(level, color, msg) __LOG_FORMAT(level, color, msg)
 #endif
+
+// Format with tag
 
 #if LOG_TIME != LOG_TIME_DISABLE && LOG_FILENAME != LOG_FILENAME_DISABLE
 #define _LOG_TAG_FORMAT(level, color, tag, msg) __LOG_TAG_TIME_FILE_FORMAT(level, color, tag, msg)
@@ -311,6 +312,52 @@ static_assert(__cplusplus >= 202002L, "LOG_TYPE_STD_FORMAT requires C++20 or lat
 /**--------------------------------------------------------------------------------------
  * Logger Public Macros
  *-------------------------------------------------------------------------------------*/
+
+// Print macros
+
+#if LOG_PRINT_TYPE == LOG_TYPE_STD_FORMAT
+static_assert(__cplusplus >= 202002L, "LOG_TYPE_STD_FORMAT requires C++20 or later");
+#include <format>
+#define LOG_PRINT(msg, ...) LOG_OUTPUT.print(std::format(msg, ##__VA_ARGS__).c_str());
+#define LOG_PRINTLN(msg, ...) LOG_OUTPUT.print(std::format(msg LOG_EOL, ##__VA_ARGS__).c_str());
+#else
+#define LOG_PRINT(format, ...) _printf(format, ##__VA_ARGS__)
+#define LOG_PRINTLN(format, ...) _printf(format LOG_EOL, ##__VA_ARGS__)
+#endif
+
+// Log without tag
+
+#if LOG_LEVEL >= LOG_LEVEL_VERBOSE
+#define LOG_V(message, ...) LOG_PRINT(_LOG_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, message), ##__VA_ARGS__);
+#else
+#define LOG_V(message, ...)
+#endif
+
+#if LOG_LEVEL >= LOG_LEVEL_DEBUG
+#define LOG_D(message, ...) LOG_PRINT(_LOG_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, message), ##__VA_ARGS__);
+#else
+#define LOG_D(message, ...)
+#endif
+
+#if LOG_LEVEL >= LOG_LEVEL_INFO
+#define LOG_I(message, ...) LOG_PRINT(_LOG_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, message), ##__VA_ARGS__);
+#else
+#define LOG_I(message, ...)
+#endif
+
+#if LOG_LEVEL >= LOG_LEVEL_WARNING
+#define LOG_W(message, ...) LOG_PRINT(_LOG_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, message), ##__VA_ARGS__);
+#else
+#define LOG_W(message, ...)
+#endif
+
+#if LOG_LEVEL >= LOG_LEVEL_ERROR
+#define LOG_E(message, ...) LOG_PRINT(_LOG_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, message), ##__VA_ARGS__);
+#else
+#define LOG_E(message, ...)
+#endif
+
+// Log with tag
 
 #if LOG_LEVEL >= LOG_LEVEL_VERBOSE
 #define LOG_VERB(tag, message, ...)                                                           \
@@ -355,36 +402,4 @@ static_assert(__cplusplus >= 202002L, "LOG_TYPE_STD_FORMAT requires C++20 or lat
     _IF_LOG_FILTER_END
 #else
 #define LOG_ERROR(tag, message, ...)
-#endif
-
-// Without tag
-
-#if LOG_LEVEL >= LOG_LEVEL_VERBOSE
-#define LOG_V(message, ...) LOG_PRINT(_LOG_FORMAT(LOG_LEVEL_VERBOSE, _LOG_COLOR_V, message), ##__VA_ARGS__);
-#else
-#define LOG_V(message, ...)
-#endif
-
-#if LOG_LEVEL >= LOG_LEVEL_DEBUG
-#define LOG_D(message, ...) LOG_PRINT(_LOG_FORMAT(LOG_LEVEL_DEBUG, _LOG_COLOR_D, message), ##__VA_ARGS__);
-#else
-#define LOG_D(message, ...)
-#endif
-
-#if LOG_LEVEL >= LOG_LEVEL_INFO
-#define LOG_I(message, ...) LOG_PRINT(_LOG_FORMAT(LOG_LEVEL_INFO, _LOG_COLOR_I, message), ##__VA_ARGS__);
-#else
-#define LOG_I(message, ...)
-#endif
-
-#if LOG_LEVEL >= LOG_LEVEL_WARNING
-#define LOG_W(message, ...) LOG_PRINT(_LOG_FORMAT(LOG_LEVEL_WARNING, _LOG_COLOR_W, message), ##__VA_ARGS__);
-#else
-#define LOG_W(message, ...)
-#endif
-
-#if LOG_LEVEL >= LOG_LEVEL_ERROR
-#define LOG_E(message, ...) LOG_PRINT(_LOG_FORMAT(LOG_LEVEL_ERROR, _LOG_COLOR_E, message), ##__VA_ARGS__);
-#else
-#define LOG_E(message, ...)
 #endif
