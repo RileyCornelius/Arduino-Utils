@@ -41,6 +41,30 @@ namespace _logger
         vprintf(format, arg);
         va_end(arg);
     }
+
+    void assertion(bool condition, const char *file, int line, const char *func, const char *expr, const char *message)
+    {
+        if (!condition)
+        {
+            return;
+        }
+
+        char buff[256];
+#if LOG_COLORS == LOG_COLORS_ENABLE
+        snprintf(buff, sizeof(buff), _LOG_COLOR(_LOG_COLOR_RED) "[ASSERT] %s:%d - %s(): (%s) => %s" _LOG_RESET_COLOR, file, line, func, expr, message);
+#else
+        snprintf(buff, sizeof(buff), "[ASSERT] %s:%d - %s(): (%s) => %s", file, line, func, expr, message);
+#endif
+
+        LOG_PRINTLN();
+        LOG_PRINTLN(buff);
+        LOG_PRINTLN();
+
+        while (true)
+        {
+            delay(1000);
+        };
+    }
 #endif // LOG_LEVEL > LOG_LEVEL_DISABLE
 
 #if LOG_TIME != LOG_TIME_DISABLE
@@ -113,4 +137,4 @@ namespace _logger
         return path + pos;
     }
 #endif // LOG_FILENAME == LOG_FILENAME_ENABLE
-}
+} // namespace _logger

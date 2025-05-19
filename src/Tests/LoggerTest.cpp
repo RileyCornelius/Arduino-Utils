@@ -67,6 +67,7 @@ void loggerLoop()
     LOG_PRINTLN();
 #endif
 
+    // ASSERT(i > 0, "i must be greater than 0");
     delay(10000);
 }
 

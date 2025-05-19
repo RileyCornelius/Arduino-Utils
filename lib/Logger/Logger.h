@@ -22,6 +22,7 @@
 #define LOG_LEVEL_TEXT_FORMAT_FULL 2
 
 #define LOG_TIME_DISABLE 0
+#define LOG_TIME_ENABLE 2 // Defined for consistency with other options. Same as LOG_TIME_MILLIS.
 #define LOG_TIME_MICROS 1
 #define LOG_TIME_MILLIS 2
 #define LOG_TIME_HHMMSSMS 3
@@ -34,6 +35,7 @@
 #define LOG_FILENAME_ENABLE 1
 
 #define LOG_FILTER_DISABLE -1
+#define LOG_FILTER_ENABLE 0 // Defined for consistency with other options. Same as LOG_FILTER_EXCLUDE.
 #define LOG_FILTER_EXCLUDE 0
 #define LOG_FILTER_INCLUDE 1
 
@@ -116,6 +118,7 @@ namespace _logger
 #if LOG_FILENAME == LOG_FILENAME_ENABLE
     const char *filepathToName(const char *path);
 #endif
+    void assertion(bool flag, const char *file, int line, const char *func, const char *expr, const char *message = "");
 }
 
 /**--------------------------------------------------------------------------------------
@@ -237,17 +240,29 @@ namespace _logger
  * Logger Public Macros
  *-------------------------------------------------------------------------------------*/
 
+// Assert macros
+
+#if LOG_LEVEL != LOG_LEVEL_DISABLE
+#define ASSERT(condition, msg) _logger::assertion((condition), _logger::filepathToName(__FILE__), __LINE__, __func__, #condition, msg)
+#else
+#define ASSERT(condition, msg) ((void)0)
+#endif
+
 // Print macros
 
 #define LOG_BEGIN(baud) LOG_OUTPUT.begin(baud)
 #define LOG_PRINT(msg) LOG_OUTPUT.print(msg)
 #define LOG_PRINTLN(msg) LOG_OUTPUT.println(msg)
 
-#if LOG_PRINT_TYPE == LOG_PRINT_TYPE_STD_FORMAT && __cplusplus >= 202002L
+// Printf macro based on LOG_PRINT_TYPE
+
+// Use C++20 std::format
+#if LOG_PRINT_TYPE == LOG_PRINT_TYPE_STD_FORMAT
 #include <format> // Use the C++20 format library
 #define LOG_PRINTF(msg, ...) LOG_OUTPUT.print(std::format(msg, ##__VA_ARGS__).c_str())
+// Use fmtlib fmt::format
 #elif LOG_PRINT_TYPE == LOG_PRINT_TYPE_FMT_FORMAT
-#define FMT_HEADER_ONLY // Use the header only because compiling the source with the Arduino build system is difficult. Remove src folder from the fmtlib to fix compile error.
+#define FMT_HEADER_ONLY // Use the header only because compiling the source with the Arduino build system is difficult. Remove src folder from the fmtlib to fix compile error. https://github.com/fmtlib/fmt - https://github.com/DarkWizarD24/fmt-arduino
 #pragma push_macro("F") // Backup conflicting macros
 #pragma push_macro("B1")
 #undef B1 // Disable conflicting macros
@@ -256,6 +271,7 @@ namespace _logger
 #pragma pop_macro("F") // Restore conflicting macros
 #pragma pop_macro("B1")
 #define LOG_PRINTF(msg, ...) LOG_OUTPUT.print(fmt::format(msg, ##__VA_ARGS__).c_str())
+// Default to printf
 #else
 #define LOG_PRINTF(msg, ...) _logger::printf(msg, ##__VA_ARGS__)
 #endif
