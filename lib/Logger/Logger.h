@@ -94,120 +94,122 @@ static_assert(LOG_COLORS == LOG_COLORS_DISABLE || LOG_COLORS == LOG_COLORS_ENABL
 /**--------------------------------------------------------------------------------------
  * Logger Private Functions
  *-------------------------------------------------------------------------------------*/
-
-#if LOG_LEVEL > LOG_LEVEL_DISABLE
-static void _vprintf(const char *format, va_list arg)
+namespace _logger
 {
-    char buf[64];
-    char *temp = buf;
-    va_list copy;
-    va_copy(copy, arg);
-    int len = vsnprintf(temp, sizeof(buf), format, copy);
-    va_end(copy);
-    if (len < 0)
+#if LOG_LEVEL > LOG_LEVEL_DISABLE && LOG_PRINT_TYPE == LOG_PRINT_TYPE_PRINTF
+    void vprintf(const char *format, va_list arg)
     {
-        va_end(arg);
-        return;
-    }
-    if (len >= (int)sizeof(buf))
-    {
-        temp = (char *)malloc(len + 1);
-        if (temp == NULL)
+        char buf[64];
+        char *temp = buf;
+        va_list copy;
+        va_copy(copy, arg);
+        int len = vsnprintf(temp, sizeof(buf), format, copy);
+        va_end(copy);
+        if (len < 0)
         {
             va_end(arg);
             return;
         }
-        len = vsnprintf(temp, len + 1, format, arg);
+        if (len >= (int)sizeof(buf))
+        {
+            temp = (char *)malloc(len + 1);
+            if (temp == NULL)
+            {
+                va_end(arg);
+                return;
+            }
+            len = vsnprintf(temp, len + 1, format, arg);
+        }
+        va_end(arg);
+        LOG_OUTPUT.print(temp);
+        if (temp != buf)
+        {
+            free(temp);
+        }
     }
-    va_end(arg);
-    LOG_OUTPUT.print(temp);
-    if (temp != buf)
-    {
-        free(temp);
-    }
-}
 
-static void _printf(const char *format, ...)
-{
-    va_list arg;
-    va_start(arg, format);
-    _vprintf(format, arg);
-    va_end(arg);
-}
+    void printf(const char *format, ...)
+    {
+        va_list arg;
+        va_start(arg, format);
+        vprintf(format, arg);
+        va_end(arg);
+    }
 #endif // LOG_LEVEL > LOG_LEVEL_DISABLE
 
 #if LOG_TIME != LOG_TIME_DISABLE
-static const char *_formatTime()
-{
+    const char *formatTime()
+    {
 #if LOG_TIME == LOG_TIME_MICROS
-    static char timeFormat[12];
-    sprintf(timeFormat, "%11lu", micros());
+        static char timeFormat[12];
+        sprintf(timeFormat, "%11lu", micros());
 #elif LOG_TIME == LOG_TIME_MILLIS
-    static char timeFormat[9];
-    sprintf(timeFormat, "%8lu", millis());
+        static char timeFormat[9];
+        sprintf(timeFormat, "%8lu", millis());
 #elif (LOG_TIME == LOG_TIME_HHMMSSMS) || (LOG_TIME == LOG_TIME_HHHHMMSSMS)
-    unsigned long ms = millis();
-    unsigned long seconds = ms / 1000;
-    unsigned long minutes = seconds / 60;
-    unsigned long hours = minutes / 60;
+        unsigned long ms = millis();
+        unsigned long seconds = ms / 1000;
+        unsigned long minutes = seconds / 60;
+        unsigned long hours = minutes / 60;
 #if LOG_TIME == LOG_TIME_HHMMSSMS
-    static char timeFormat[13];
-    sprintf(timeFormat, "%02lu:%02lu:%02lu:%03lu", hours % 24, minutes % 60, seconds % 60, ms % 1000);
+        static char timeFormat[13];
+        sprintf(timeFormat, "%02lu:%02lu:%02lu:%03lu", hours % 24, minutes % 60, seconds % 60, ms % 1000);
 #elif LOG_TIME == LOG_TIME_HHHHMMSSMS
-    static char timeFormat[15];
-    sprintf(timeFormat, "%04lu:%02lu:%02lu:%03lu", hours, minutes % 60, seconds % 60, ms % 1000);
+        static char timeFormat[15];
+        sprintf(timeFormat, "%04lu:%02lu:%02lu:%03lu", hours, minutes % 60, seconds % 60, ms % 1000);
 #endif // LOG_TIME == LOG_TIME_HHMMSSMS
 
 #else
-    static char timeFormat[1] = {'\0'}; // Default to an empty string as a safeguard.
+        static char timeFormat[1] = {'\0'}; // Default to an empty string as a safeguard.
 #endif // LOG_TIME == LOG_TIME_MICROS
 
-    return timeFormat;
-}
+        return timeFormat;
+    }
 #endif // LOG_TIME != LOG_TIME_DISABLE
 
 #if LOG_FILTER != LOG_FILTER_DISABLE
-static bool _logFilter(const char *tag)
-{
-    static const char *filterList[] = LOG_FILTER_LIST;
-    static const int length = sizeof(filterList) / sizeof(filterList[0]);
-
-    bool inFilter = false;
-    for (int i = 0; i < length; i++)
+    bool logFilter(const char *tag)
     {
-        if (strcmp(filterList[i], tag) == 0)
+        static const char *filterList[] = LOG_FILTER_LIST;
+        static const int length = sizeof(filterList) / sizeof(filterList[0]);
+
+        bool inFilter = false;
+        for (int i = 0; i < length; i++)
         {
-            inFilter = true;
-            break;
+            if (strcmp(filterList[i], tag) == 0)
+            {
+                inFilter = true;
+                break;
+            }
         }
+        return LOG_FILTER ? inFilter : !inFilter; // INCLUDE or EXCLUDE
     }
-    return LOG_FILTER ? inFilter : !inFilter; // INCLUDE or EXCLUDE
-}
 #endif // LOG_LOG_FILTER != LOG_FILTER_DISABLE
 
 #if LOG_FILENAME == LOG_FILENAME_ENABLE
-const char *pathToName(const char *path)
-{
-    size_t i = 0;
-    size_t pos = 0;
-    char *p = (char *)path;
-    while (*p)
+    const char *filepathToName(const char *path)
     {
-        i++;
-        if (*p == '/' || *p == '\\')
+        size_t i = 0;
+        size_t pos = 0;
+        char *p = (char *)path;
+        while (*p)
         {
-            pos = i;
+            i++;
+            if (*p == '/' || *p == '\\')
+            {
+                pos = i;
+            }
+            if (*p == '.')
+            {
+                *p = '\0';
+                break;
+            }
+            p++;
         }
-        if (*p == '.')
-        {
-            *p = '\0';
-            break;
-        }
-        p++;
+        return path + pos;
     }
-    return path + pos;
-}
 #endif // LOG_FILENAME == LOG_FILENAME_ENABLE
+}
 
 /**--------------------------------------------------------------------------------------
  * Logger Private Macros
@@ -246,7 +248,7 @@ const char *pathToName(const char *path)
 
 #if LOG_FILTER != LOG_FILTER_DISABLE
 #define _IF_LOG_FILTER_BEGIN(tag) \
-    if (_logFilter(tag))          \
+    if (_logger::logFilter(tag))  \
     {
 #define _IF_LOG_FILTER_END }
 #else
@@ -280,24 +282,24 @@ const char *pathToName(const char *path)
 
 #if LOG_PRINT_TYPE == LOG_PRINT_TYPE_STD_FORMAT || LOG_PRINT_TYPE == LOG_PRINT_TYPE_FMT_FORMAT
 #define __LOG_TAG_FORMAT(loglevel, color, tag, format) color loglevel "[{}] " format _LOG_RESET_COLOR LOG_EOL, tag
-#define __LOG_TAG_TIME_FORMAT(loglevel, color, tag, format) color loglevel "[{}][{}] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), tag
-#define __LOG_TAG_FILE_FORMAT(loglevel, color, tag, format) color loglevel "[{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, tag, pathToName(__FILE__), __LINE__
-#define __LOG_TAG_TIME_FILE_FORMAT(loglevel, color, tag, format) color loglevel "[{}][{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), tag, pathToName(__FILE__), __LINE__
+#define __LOG_TAG_TIME_FORMAT(loglevel, color, tag, format) color "[{}]" loglevel "[{}] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), tag
+#define __LOG_TAG_FILE_FORMAT(loglevel, color, tag, format) color loglevel "[{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, tag, _logger::filepathToName(__FILE__), __LINE__
+#define __LOG_TAG_TIME_FILE_FORMAT(loglevel, color, tag, format) color "[{}]" loglevel "[{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), tag, _logger::filepathToName(__FILE__), __LINE__
 
 #define __LOG_FORMAT(loglevel, color, format) color loglevel " " format _LOG_RESET_COLOR LOG_EOL
-#define __LOG_TIME_FORMAT(loglevel, color, format) color loglevel "[{}] " format _LOG_RESET_COLOR LOG_EOL, _formatTime()
-#define __LOG_FILE_FORMAT(loglevel, color, format) color loglevel "[{}:{}] " format _LOG_RESET_COLOR LOG_EOL, pathToName(__FILE__), __LINE__
-#define __LOG_TIME_FILE_FORMAT(loglevel, color, format) color loglevel "[{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), pathToName(__FILE__), __LINE__
+#define __LOG_TIME_FORMAT(loglevel, color, format) color "[{}]" loglevel " " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime()
+#define __LOG_FILE_FORMAT(loglevel, color, format) color loglevel "[{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _logger::filepathToName(__FILE__), __LINE__
+#define __LOG_TIME_FILE_FORMAT(loglevel, color, format) color "[{}]" loglevel "[{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), _logger::filepathToName(__FILE__), __LINE__
 #else
-#define __LOG_TAG_FORMAT(loglevel, color, tag, format) color loglevel "[%s] " format _LOG_RESET_COLOR LOG_EOL, tag
-#define __LOG_TAG_TIME_FORMAT(loglevel, color, tag, format) color loglevel "[%s][%s] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), tag
-#define __LOG_TAG_FILE_FORMAT(loglevel, color, tag, format) color loglevel "[%s][%s:%s] " format _LOG_RESET_COLOR LOG_EOL, tag, pathToName(__FILE__), __LINE__
-#define __LOG_TAG_TIME_FILE_FORMAT(loglevel, color, tag, format) color loglevel "[%s][%s][%s:%s] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), tag, pathToName(__FILE__), __LINE__
+#define __LOG_TAG_FORMAT(loglevel, color, tag, format) color "[%s]" loglevel " " format _LOG_RESET_COLOR LOG_EOL, tag
+#define __LOG_TAG_TIME_FORMAT(loglevel, color, tag, format) color "[%s]" loglevel "[%s] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), tag
+#define __LOG_TAG_FILE_FORMAT(loglevel, color, tag, format) color loglevel "[%s:%d] " format _LOG_RESET_COLOR LOG_EOL, tag, _logger::filepathToName(__FILE__), __LINE__
+#define __LOG_TAG_TIME_FILE_FORMAT(loglevel, color, tag, format) color "[%s]" loglevel "[%s][%s:%d] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), tag, _logger::filepathToName(__FILE__), __LINE__
 
 #define __LOG_FORMAT(loglevel, color, format) color loglevel " " format _LOG_RESET_COLOR LOG_EOL
-#define __LOG_TIME_FORMAT(loglevel, color, format) color loglevel "[%s] " format _LOG_RESET_COLOR LOG_EOL, _formatTime()
-#define __LOG_FILE_FORMAT(loglevel, color, format) color loglevel "[%s][%s:%s] " format _LOG_RESET_COLOR LOG_EOL, pathToName(__FILE__), __LINE__
-#define __LOG_TIME_FILE_FORMAT(loglevel, color, format) color loglevel "[%s][%s:%s] " format _LOG_RESET_COLOR LOG_EOL, _formatTime(), pathToName(__FILE__), __LINE__
+#define __LOG_TIME_FORMAT(loglevel, color, format) color "[%s]" loglevel " " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime()
+#define __LOG_FILE_FORMAT(loglevel, color, format) color loglevel "[%s:%d] " format _LOG_RESET_COLOR LOG_EOL, _logger::filepathToName(__FILE__), __LINE__
+#define __LOG_TIME_FILE_FORMAT(loglevel, color, format) color "[%s]" loglevel "[%s:%d] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), _logger::filepathToName(__FILE__), __LINE__
 #endif // LOG_PRINT_TYPE == LOG_PRINT_TYPE_STD_FORMAT || LOG_PRINT_TYPE == LOG_PRINT_TYPE_FMT_FORMAT
 
 // Format without tag
@@ -347,7 +349,7 @@ const char *pathToName(const char *path)
 #pragma pop_macro("B1")
 #define LOG_PRINTF(msg, ...) LOG_OUTPUT.print(fmt::format(msg, ##__VA_ARGS__).c_str())
 #else
-#define LOG_PRINTF(msg, ...) _printf(msg, ##__VA_ARGS__)
+#define LOG_PRINTF(msg, ...) _logger::printf(msg, ##__VA_ARGS__)
 #endif
 
 // Log without tag
@@ -359,7 +361,7 @@ const char *pathToName(const char *path)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
-#define LOG_D(message, ...) LOG_PRINTF(_LOG_FORMAT(_LOG_LEVEL_DEBUG_TEXT _LOG_COLOR_D, message), ##__VA_ARGS__)
+#define LOG_D(message, ...) LOG_PRINTF(_LOG_FORMAT(_LOG_LEVEL_DEBUG_TEXT, _LOG_COLOR_D, message), ##__VA_ARGS__)
 #else
 #define LOG_D(message, ...)
 #endif
@@ -385,45 +387,45 @@ const char *pathToName(const char *path)
 // Log with tag
 
 #if LOG_LEVEL >= LOG_LEVEL_VERBOSE
-#define LOG_VERB(tag, message, ...)                                                                 \
-    _IF_LOG_FILTER_BEGIN(tag)                                                                       \
-    LOG_PRINTF(_LOG_TAG_FORMAT(_LOG_LEVEL_VERBOSE_TEXT, _LOG_COLOR_V, tag, message), ##__VA_ARGS__) \
+#define LOG_VERB(tag, message, ...)                                                                  \
+    _IF_LOG_FILTER_BEGIN(tag)                                                                        \
+    LOG_PRINTF(_LOG_TAG_FORMAT(_LOG_LEVEL_VERBOSE_TEXT, _LOG_COLOR_V, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
 #define LOG_VERB(tag, message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_DEBUG
-#define LOG_DEBUG(tag, message, ...)                                                              \
-    _IF_LOG_FILTER_BEGIN(tag)                                                                     \
-    LOG_PRINTF(_LOG_TAG_FORMAT(_LOG_LEVEL_DEBUG_TEXT, _LOG_COLOR_D, tag, message), ##__VA_ARGS__) \
+#define LOG_DEBUG(tag, message, ...)                                                               \
+    _IF_LOG_FILTER_BEGIN(tag)                                                                      \
+    LOG_PRINTF(_LOG_TAG_FORMAT(_LOG_LEVEL_DEBUG_TEXT, _LOG_COLOR_D, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
 #define LOG_DEBUG(tag, message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_INFO
-#define LOG_INFO(tag, message, ...)                                                              \
-    _IF_LOG_FILTER_BEGIN(tag)                                                                    \
-    LOG_PRINTF(_LOG_TAG_FORMAT(_LOG_LEVEL_INFO_TEXT, _LOG_COLOR_I, tag, message), ##__VA_ARGS__) \
+#define LOG_INFO(tag, message, ...)                                                               \
+    _IF_LOG_FILTER_BEGIN(tag)                                                                     \
+    LOG_PRINTF(_LOG_TAG_FORMAT(_LOG_LEVEL_INFO_TEXT, _LOG_COLOR_I, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
 #define LOG_INFO(tag, message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_WARNING
-#define LOG_WARN(tag, message, ...)                                                                 \
-    _IF_LOG_FILTER_BEGIN(tag)                                                                       \
-    LOG_PRINTF(_LOG_TAG_FORMAT(_LOG_LEVEL_WARNING_TEXT, _LOG_COLOR_W, tag, message), ##__VA_ARGS__) \
+#define LOG_WARN(tag, message, ...)                                                                  \
+    _IF_LOG_FILTER_BEGIN(tag)                                                                        \
+    LOG_PRINTF(_LOG_TAG_FORMAT(_LOG_LEVEL_WARNING_TEXT, _LOG_COLOR_W, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
 #define LOG_WARN(tag, message, ...)
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_ERROR
-#define LOG_ERROR(tag, message, ...)                                                              \
-    _IF_LOG_FILTER_BEGIN(tag)                                                                     \
-    LOG_PRINTF(_LOG_TAG_FORMAT(_LOG_LEVEL_ERROR_TEXT, _LOG_COLOR_E, tag, message), ##__VA_ARGS__) \
+#define LOG_ERROR(tag, message, ...)                                                               \
+    _IF_LOG_FILTER_BEGIN(tag)                                                                      \
+    LOG_PRINTF(_LOG_TAG_FORMAT(_LOG_LEVEL_ERROR_TEXT, _LOG_COLOR_E, tag, message), ##__VA_ARGS__); \
     _IF_LOG_FILTER_END
 #else
 #define LOG_ERROR(tag, message, ...)
