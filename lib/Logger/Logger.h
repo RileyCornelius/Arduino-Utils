@@ -239,6 +239,7 @@ namespace _logger
 
 // Print macros
 
+#define LOG_BEGIN(baud) LOG_OUTPUT.begin(baud)
 #define LOG_PRINT(msg) LOG_OUTPUT.print(msg)
 #define LOG_PRINTLN(msg) LOG_OUTPUT.println(msg)
 
@@ -274,7 +275,7 @@ namespace _logger
 #endif
 
 #if LOG_LEVEL >= LOG_LEVEL_INFO
-#define LOG_I(message, ...) LOG_PRINTF(_LOG_FORMAT(_LOG_LEVEL_INFO_TEXT, LOG_COLOR_I, message), ##__VA_ARGS__)
+#define LOG_I(message, ...) LOG_PRINTF(_LOG_FORMAT(_LOG_LEVEL_INFO_TEXT, _LOG_COLOR_I, message), ##__VA_ARGS__)
 #else
 #define LOG_I(message, ...)
 #endif
