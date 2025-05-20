@@ -40,8 +40,9 @@
 #define LOG_FILTER_INCLUDE 1
 
 #define LOG_PRINT_TYPE_PRINTF 0
-#define LOG_PRINT_TYPE_STD_FORMAT 1
-#define LOG_PRINT_TYPE_FMT_FORMAT 2
+#define LOG_PRINT_TYPE_CUSTOM_FORMAT 1
+#define LOG_PRINT_TYPE_STD_FORMAT 2
+#define LOG_PRINT_TYPE_FMT_FORMAT 3
 
 /**--------------------------------------------------------------------------------------
  * Logger Default Settings
@@ -93,7 +94,7 @@ static_assert(LOG_LEVEL >= LOG_LEVEL_DISABLE && LOG_LEVEL <= LOG_LEVEL_VERBOSE, 
 static_assert(LOG_LEVEL_TEXT_FORMAT >= LOG_LEVEL_TEXT_FORMAT_LETTER && LOG_LEVEL_TEXT_FORMAT <= LOG_LEVEL_TEXT_FORMAT_FULL, "LOG_LEVEL_TEXT_FORMAT must be either LOG_LEVEL_TEXT_FORMAT_LETTER, LOG_LEVEL_TEXT_FORMAT_SHORT or LOG_LEVEL_TEXT_FORMAT_LONG");
 static_assert(LOG_TIME >= LOG_TIME_DISABLE && LOG_TIME <= LOG_TIME_HHHHMMSSMS, "LOG_TIME must be between LOG_TIME_DISABLE and LOG_TIME_HHHHMMSSMS");
 static_assert(LOG_FILTER >= LOG_FILTER_DISABLE && LOG_FILTER <= LOG_FILTER_INCLUDE, "LOG_FILTER must be between LOG_FILTER_DISABLE and LOG_FILTER_INCLUDE");
-static_assert(LOG_PRINT_TYPE >= LOG_PRINT_TYPE_PRINTF || LOG_PRINT_TYPE <= LOG_PRINT_TYPE_FMT_FORMAT, "LOG_PRINT_TYPE must be either LOG_PRINT_TYPE_PRINTF, LOG_PRINT_TYPE_STD_FORMAT or LOG_PRINT_TYPE_FMT_FORMAT");
+static_assert(LOG_PRINT_TYPE >= LOG_PRINT_TYPE_PRINTF || LOG_PRINT_TYPE <= LOG_PRINT_TYPE_FMT_FORMAT, "LOG_PRINT_TYPE must be either LOG_PRINT_TYPE_PRINTF, LOG_PRINT_TYPE_CUSTOM_FORMAT, LOG_PRINT_TYPE_STD_FORMAT or LOG_PRINT_TYPE_FMT_FORMAT");
 static_assert(LOG_FILENAME == LOG_FILENAME_DISABLE || LOG_FILENAME == LOG_FILENAME_ENABLE, "LOG_FILENAME must be either LOG_FILENAME_DISABLE or LOG_FILENAME_ENABLE");
 static_assert(LOG_COLORS == LOG_COLORS_DISABLE || LOG_COLORS == LOG_COLORS_ENABLE, "LOG_COLORS must be either LOG_COLORS_DISABLE or LOG_COLORS_ENABLE");
 
@@ -118,6 +119,7 @@ namespace _logger
 #if LOG_FILENAME == LOG_FILENAME_ENABLE
     const char *filepathToName(const char *path);
 #endif
+
     void assertion(bool flag, const char *file, int line, const char *func, const char *expr, const char *message = "");
 }
 
@@ -129,22 +131,23 @@ namespace _logger
 
 #if LOG_COLORS == LOG_COLORS_ENABLE
 #define _LOG_COLOR_BLACK "30"
-#define _LOG_COLOR_RED "31"    // ERROR
+#define _LOG_COLOR_BRIGHT_RED "91" // ERROR
+#define _LOG_COLOR_RED "31"
 #define _LOG_COLOR_GREEN "32"  // INFO
 #define _LOG_COLOR_YELLOW "33" // WARNING
 #define _LOG_COLOR_BLUE "34"
 #define _LOG_COLOR_MAGENTA "35"
-#define _LOG_COLOR_CYAN "36" // DEBUG
-#define _LOG_COLOR_GRAY "37" // VERBOSE
+#define _LOG_COLOR_CYAN "36"         // DEBUG
+#define _LOG_COLOR_BRIGHT_WHITE "37" // VERBOSE
 #define _LOG_COLOR_WHITE "38"
 #define _LOG_COLOR(COLOR) "\033[0;" COLOR "m"
 #define _LOG_BOLD(COLOR) "\033[1;" COLOR "m"
 #define _LOG_RESET_COLOR "\033[0m"
-#define _LOG_COLOR_E _LOG_COLOR(_LOG_COLOR_RED)
+#define _LOG_COLOR_E _LOG_COLOR(_LOG_COLOR_BRIGHT_RED)
 #define _LOG_COLOR_W _LOG_COLOR(_LOG_COLOR_YELLOW)
 #define _LOG_COLOR_I _LOG_COLOR(_LOG_COLOR_GREEN)
 #define _LOG_COLOR_D _LOG_COLOR(_LOG_COLOR_CYAN)
-#define _LOG_COLOR_V _LOG_COLOR(_LOG_COLOR_GRAY)
+#define _LOG_COLOR_V _LOG_COLOR(_LOG_COLOR_BRIGHT_WHITE)
 #else
 #define _LOG_COLOR_E ""
 #define _LOG_COLOR_W ""
@@ -190,7 +193,7 @@ namespace _logger
 
 // Preamble format
 
-#if LOG_PRINT_TYPE == LOG_PRINT_TYPE_STD_FORMAT || LOG_PRINT_TYPE == LOG_PRINT_TYPE_FMT_FORMAT
+#if LOG_PRINT_TYPE == LOG_PRINT_TYPE_STD_FORMAT || LOG_PRINT_TYPE == LOG_PRINT_TYPE_FMT_FORMAT || LOG_PRINT_TYPE == LOG_PRINT_TYPE_CUSTOM_FORMAT
 #define __LOG_TAG_FORMAT(loglevel, color, tag, format) color loglevel "[{}] " format _LOG_RESET_COLOR LOG_EOL, tag
 #define __LOG_TAG_TIME_FORMAT(loglevel, color, tag, format) color "[{}]" loglevel "[{}] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), tag
 #define __LOG_TAG_FILE_FORMAT(loglevel, color, tag, format) color loglevel "[{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, tag, _logger::filepathToName(__FILE__), __LINE__
@@ -242,6 +245,11 @@ namespace _logger
 
 // Assert macros
 
+#ifndef STRINGIFY
+#define STRINGIFY_1(...) #__VA_ARGS__
+#define STRINGIFY(...) STRINGIFY_1(__VA_ARGS__)
+#endif
+
 #if LOG_LEVEL != LOG_LEVEL_DISABLE
 #define ASSERT(condition, msg) _logger::assertion((condition), _logger::filepathToName(__FILE__), __LINE__, __func__, #condition, msg)
 #else
@@ -272,6 +280,9 @@ namespace _logger
 #pragma pop_macro("B1")
 #define LOG_PRINTF(msg, ...) LOG_OUTPUT.print(fmt::format(msg, ##__VA_ARGS__).c_str())
 // Default to printf
+#elif LOG_PRINT_TYPE == LOG_PRINT_TYPE_CUSTOM_FORMAT
+#include <afmt.h>
+#define LOG_PRINTF(msg, ...) LOG_OUTPUT.print(afmt::aformat(msg, ##__VA_ARGS__))
 #else
 #define LOG_PRINTF(msg, ...) _logger::printf(msg, ##__VA_ARGS__)
 #endif
