@@ -437,11 +437,20 @@ namespace afmt
         const char *begin, const char *end,
         format_specs &specs, parse_context &ctx, type arg_type)
     {
-
         if (begin == end)
             return begin;
 
         char c = *begin;
+
+        // Parse fill character and alignment
+        if (begin + 1 != end && (*(begin + 1) == '<' || *(begin + 1) == '>' || *(begin + 1) == '^'))
+        {
+            // If the character after the current one is an alignment character,
+            // then the current character is a fill character
+            specs.fill = c;
+            ++begin;    // Move past the fill character
+            c = *begin; // Update c to the alignment character
+        }
 
         // Parse alignment
         if (c == '<' || c == '>' || c == '^')
@@ -628,6 +637,15 @@ namespace afmt
             value_.sv_data.size = value.size();
         }
         format_arg_value(const void *value) : type_(type::pointer_type) { value_.pointer_value = value; }
+
+        // Modified to handle any pointer type with is_pointer trait
+        template <typename T,
+                  typename = typename std::enable_if<std::is_pointer<T>::value &&
+                                                     !std::is_same<T, const char *>::value>::type>
+        format_arg_value(T value) : type_(type::pointer_type)
+        {
+            value_.pointer_value = static_cast<const void *>(value);
+        }
 
         type get_type() const { return type_; }
 
