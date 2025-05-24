@@ -1219,17 +1219,49 @@ inline void vformat_to(buffer<char> &out, string_view fmt, format_args args)
     }
 }
 
+// =============== Argument Storage Helper ===============
+
+// format_arg_store_n holds N format_arg_value objects.
+// This allows make_format_args to return a structure containing the arguments
+// by value, ensuring their lifetime for the duration of the formatting call.
+template <size_t N_args>
+class format_arg_store_n
+{
+public:
+    format_arg_value arg_buffer_[N_args > 0 ? N_args : 1];
+    size_t count_;
+
+    template <typename... ArgsPack>
+    AFMT_CONSTEXPR format_arg_store_n(const ArgsPack &...actual_args)
+        : arg_buffer_{format_arg_value(actual_args)...}, count_(N_args) {}
+
+    // Implicit conversion to format_args, providing a view into the stored arguments.
+    AFMT_CONSTEXPR operator format_args() const
+    {
+        return format_args(arg_buffer_, count_);
+    }
+
+    // Explicit conversion to format_args, providing a view into the stored arguments.
+    AFMT_CONSTEXPR format_args get_args() const
+    {
+        return format_args(arg_buffer_, count_);
+    }
+};
+
+// Helper to create format_arg_store_n from variadic template arguments.
+template <typename... Args>
+AFMT_CONSTEXPR inline format_arg_store_n<sizeof...(Args)> make_format_args(const Args &...args)
+{
+    return format_arg_store_n<sizeof...(Args)>(args...);
+}
+
 // =============== Public API Functions ===============
 
 // Format to a buffer
 template <typename... Args>
 void format_to(buffer<char> &buf, string_view fmt, const Args &...args)
 {
-    // Handle the case of no arguments gracefully to avoid zero-size array
-    AFMT_CONSTEXPR size_t arg_count = sizeof...(args);
-    format_arg_value values[arg_count > 0 ? arg_count : 1] = {format_arg_value(args)...};
-    format_args fargs(values, arg_count);
-    vformat_to(buf, fmt, fargs);
+    vformat_to(buf, fmt, make_format_args(args...));
 }
 
 // Format to a fixed-size array
@@ -1237,7 +1269,7 @@ template <size_t N, typename... Args>
 void format_to(char (&out)[N], string_view fmt, const Args &...args)
 {
     buffer<char> buf;
-    format_to(buf, fmt, args...);
+    vformat_to(buf, fmt, make_format_args(args...));
 
     // Copy to the fixed array with null termination
     size_t size = buf.size() < N - 1 ? buf.size() : N - 1;
@@ -1255,8 +1287,8 @@ void format_to_n(char *out, size_t n, string_view fmt, const Args &...args)
     if (n == 0)
         return; // No space to write anything
 
-    buffer<char> buf;
-    format_to(buf, fmt, args...);
+    buffer<char> buf(n);
+    vformat_to(buf, fmt, make_format_args(args...));
 
     // Copy to the output buffer
     size_t size = buf.size() < n - 1 ? buf.size() : n - 1;
@@ -1272,30 +1304,22 @@ template <typename... Args>
 size_t formatted_size(string_view fmt, const Args &...args)
 {
     buffer<char> buf;
-    format_to(buf, fmt, args...);
+    vformat_to(buf, fmt, make_format_args(args...));
     return buf.size();
 }
 
-#if AFMT_HAS_CXX_11
 inline std::string vformat(string_view fmt, format_args args)
 {
     buffer<char> buf;
     vformat_to(buf, fmt, args);
-
-    // Create std::string directly from buffer data
     return std::string(buf.data(), buf.size());
 }
 
 template <typename... Args>
 std::string format(string_view fmt, const Args &...args)
 {
-    // Handle the case of no arguments gracefully to avoid zero-size array
-    AFMT_CONSTEXPR size_t arg_count = sizeof...(args);
-    format_arg_value values[arg_count > 0 ? arg_count : 1] = {format_arg_value(args)...};
-    format_args fargs(values, arg_count);
-    return vformat(fmt, fargs);
+    return vformat(fmt, make_format_args(args...));
 }
-#endif
 
 #if AFMT_HAS_ARDUINO
 // Format to an Arduino String
@@ -1303,39 +1327,25 @@ inline String avformat(string_view fmt, format_args args)
 {
     buffer<char> buf;
     vformat_to(buf, fmt, args);
-
-    // Create String directly from buffer data
     return String(buf.data(), buf.size());
 }
 
 template <typename... Args>
 String aformat(string_view fmt, const Args &...args)
 {
-    // Handle the case of no arguments gracefully to avoid zero-size array
-    AFMT_CONSTEXPR size_t arg_count = sizeof...(args);
-    format_arg_value values[arg_count > 0 ? arg_count : 1] = {format_arg_value(args)...};
-    format_args fargs(values, arg_count);
-    return avformat(fmt, fargs);
+    return avformat(fmt, make_format_args(args...));
 }
 
 template <typename... Args>
 void print(string_view fmt, const Args &...args)
 {
-    AFMT_CONSTEXPR size_t arg_count = sizeof...(args);
-    format_arg_value values[arg_count > 0 ? arg_count : 1] = {format_arg_value(args)...};
-    format_args fargs(values, arg_count);
-
-    Serial.print(avformat(fmt, fargs));
+    Serial.print(avformat(fmt, make_format_args(args...)));
 }
 
 template <typename... Args>
 void println(string_view fmt, const Args &...args)
 {
-    AFMT_CONSTEXPR size_t arg_count = sizeof...(args);
-    format_arg_value values[arg_count > 0 ? arg_count : 1] = {format_arg_value(args)...};
-    format_args fargs(values, arg_count);
-
-    Serial.println(avformat(fmt, fargs));
+    Serial.println(avformat(fmt, make_format_args(args...)));
 }
 #endif
 
