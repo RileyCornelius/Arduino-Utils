@@ -197,7 +197,7 @@ private:
     size_t capacity_;
 
 public:
-    buffer() : data_(nullptr), size_(0), capacity_(0) {}
+    AFMT_CONSTEXPR buffer() : data_(nullptr), size_(0), capacity_(0) {}
     buffer(size_t initial_capacity) : size_(0), capacity_(initial_capacity)
     {
         data_ = initial_capacity > 0 ? new T[initial_capacity] : nullptr;
@@ -235,9 +235,9 @@ public:
 
     // Accessors
     T *data() { return data_; }
-    const T *data() const { return data_; }
-    size_t size() const { return size_; }
-    size_t capacity() const { return capacity_; }
+    AFMT_CONSTEXPR const T *data() const { return data_; }
+    AFMT_CONSTEXPR size_t size() const { return size_; }
+    AFMT_CONSTEXPR size_t capacity() const { return capacity_; }
 
     // Operations
     void clear() { size_ = 0; }
@@ -305,7 +305,7 @@ private:
     buffer<char> *buffer_;
 
 public:
-    explicit appender(buffer<char> &buf) : buffer_(&buf) {}
+    AFMT_CONSTEXPR explicit appender(buffer<char> &buf) : buffer_(&buf) {}
 
     appender &operator=(char c)
     {
@@ -313,9 +313,9 @@ public:
         return *this;
     }
 
-    appender &operator*() { return *this; }
-    appender &operator++() { return *this; }
-    appender &operator++(int) { return *this; }
+    AFMT_CONSTEXPR appender &operator*() { return *this; }
+    AFMT_CONSTEXPR appender &operator++() { return *this; }
+    AFMT_CONSTEXPR appender &operator++(int) { return *this; }
 };
 
 // =============== Format Specifications ===============
@@ -332,7 +332,7 @@ struct format_specs
     int width;
     int precision;
 
-    format_specs()
+    AFMT_CONSTEXPR format_specs()
         : type(presentation_type::none),
           alignment(align::none),
           sign_option(sign::none),
@@ -358,11 +358,11 @@ private:
     int next_arg_id_;
 
 public:
-    explicit parse_context(string_view fmt, int next_arg_id = 0)
+    AFMT_CONSTEXPR explicit parse_context(string_view fmt, int next_arg_id = 0)
         : fmt_(fmt), next_arg_id_(next_arg_id) {}
 
-    const char *begin() const { return fmt_.data(); }
-    const char *end() const { return fmt_.data() + fmt_.size(); }
+    AFMT_CONSTEXPR const char *begin() const { return fmt_.data(); }
+    AFMT_CONSTEXPR const char *end() const { return fmt_.data() + fmt_.size(); }
 
     void advance_to(const char *it)
     {
@@ -392,19 +392,19 @@ public:
 
 // =============== Formatting Context ===============
 
-class context
-{
-private:
-    appender out_;
+// class context
+// {
+// private:
+//     appender out_;
 
-public:
-    using iterator = appender;
+// public:
+//     using iterator = appender;
 
-    explicit context(appender out) : out_(out) {}
+//     AFMT_CONSTEXPR explicit context(appender out) : out_(out) {}
 
-    appender out() const { return out_; }
-    void advance_to(appender) {} // No-op
-};
+//     AFMT_CONSTEXPR appender out() const { return out_; }
+//     AFMT_CONSTEXPR void advance_to(appender) {} // No-op
+// };
 
 // =============== Parsing Functions ===============
 
@@ -434,7 +434,7 @@ inline int parse_nonnegative_int(const char *&begin, const char *end, int error_
 }
 
 // Parse alignment specifier
-inline align parse_align(char c)
+AFMT_CONSTEXPR inline align parse_align(char c)
 {
     switch (c)
     {
@@ -609,12 +609,12 @@ private:
     int count_;
 
 public:
-    format_args() : args_(nullptr), count_(0) {}
-    format_args(const format_arg_value *args, int count)
+    AFMT_CONSTEXPR format_args() : args_(nullptr), count_(0) {}
+    AFMT_CONSTEXPR format_args(const format_arg_value *args, int count)
         : args_(args), count_(count) {}
 
-    format_arg_value get(int id) const;
-    int max_size() const { return count_; }
+    AFMT_CONSTEXPR format_arg_value get(int id) const;
+    AFMT_CONSTEXPR int max_size() const { return count_; }
 };
 
 // Type-erased formatting argument value
@@ -637,38 +637,38 @@ public:
         pointer_type
     };
 
-    format_arg_value() : type_(type::none_type) {}
+    AFMT_CONSTEXPR format_arg_value() : type_(type::none_type) {}
 
-    format_arg_value(int value) : type_(type::int_type) { value_.int_value = value; }
-    format_arg_value(unsigned value) : type_(type::uint_type) { value_.uint_value = value; }
-    format_arg_value(long long value) : type_(type::long_long_type) { value_.long_long_value = value; }
-    format_arg_value(unsigned long long value) : type_(type::ulong_long_type) { value_.ulong_long_value = value; }
-    format_arg_value(bool value) : type_(type::bool_type) { value_.bool_value = value; }
-    format_arg_value(char value) : type_(type::char_type) { value_.char_value = value; }
-    format_arg_value(float value) : type_(type::float_type) { value_.float_value = value; }
-    format_arg_value(double value) : type_(type::double_type) { value_.double_value = value; }
-    format_arg_value(const char *value) : type_(type::cstring_type) { value_.string_value = value; }
-    format_arg_value(string_view value) : type_(type::string_type)
+    AFMT_CONSTEXPR format_arg_value(int value) : type_(type::int_type) { value_.int_value = value; }
+    AFMT_CONSTEXPR format_arg_value(unsigned value) : type_(type::uint_type) { value_.uint_value = value; }
+    AFMT_CONSTEXPR format_arg_value(long long value) : type_(type::long_long_type) { value_.long_long_value = value; }
+    AFMT_CONSTEXPR format_arg_value(unsigned long long value) : type_(type::ulong_long_type) { value_.ulong_long_value = value; }
+    AFMT_CONSTEXPR format_arg_value(bool value) : type_(type::bool_type) { value_.bool_value = value; }
+    AFMT_CONSTEXPR format_arg_value(char value) : type_(type::char_type) { value_.char_value = value; }
+    AFMT_CONSTEXPR format_arg_value(float value) : type_(type::float_type) { value_.float_value = value; }
+    AFMT_CONSTEXPR format_arg_value(double value) : type_(type::double_type) { value_.double_value = value; }
+    AFMT_CONSTEXPR format_arg_value(const char *value) : type_(type::cstring_type) { value_.string_value = value; }
+    AFMT_CONSTEXPR format_arg_value(string_view value) : type_(type::string_type)
     {
         value_.sv_data.data = value.data();
         value_.sv_data.size = value.size();
     }
-    format_arg_value(const void *value) : type_(type::pointer_type) { value_.pointer_value = value; }
+    AFMT_CONSTEXPR format_arg_value(const void *value) : type_(type::pointer_type) { value_.pointer_value = value; }
 
     // Modified to handle any pointer type with is_pointer trait
     template <typename T,
               typename = typename std::enable_if<std::is_pointer<T>::value &&
                                                  !std::is_same<T, const char *>::value>::type>
-    format_arg_value(T value) : type_(type::pointer_type)
+    AFMT_CONSTEXPR format_arg_value(T value) : type_(type::pointer_type)
     {
         value_.pointer_value = static_cast<const void *>(value);
     }
 
-    type get_type() const { return type_; }
+    AFMT_CONSTEXPR type get_type() const { return type_; }
 
     // Modified to avoid using 'auto' return type
     template <typename Visitor>
-    typename std::result_of<Visitor(monostate)>::type visit(Visitor &&vis) const
+    AFMT_CONSTEXPR typename std::result_of<Visitor(monostate)>::type visit(Visitor &&vis) const
     {
         switch (type_)
         {
@@ -724,12 +724,12 @@ private:
         string_view_data sv_data; // Renamed to avoid naming conflict
         const void *pointer_value;
 
-        value() : int_value(0) {}
+        AFMT_CONSTEXPR value() : int_value(0) {}
     } value_;
 };
 
 // Implementation of format_args::get
-inline format_arg_value format_args::get(int id) const
+AFMT_CONSTEXPR inline format_arg_value format_args::get(int id) const
 {
     if (id < count_)
         return args_[id];
@@ -1158,7 +1158,7 @@ struct format_visitor
     buffer<char> &out;
     format_specs specs;
 
-    format_visitor(buffer<char> &out_, const format_specs &specs_)
+    AFMT_CONSTEXPR format_visitor(buffer<char> &out_, const format_specs &specs_)
         : out(out_), specs(specs_) {}
 
     template <typename T>
