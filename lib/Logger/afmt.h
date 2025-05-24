@@ -22,33 +22,49 @@
 #include <Arduino.h>
 #endif
 
-// Include standard string if available
-#if AFMT_HAS_CXX_11
 #include <string>
+
+// Define macros for compiler detection
+#if defined(__GNUC__)
+#define AFMT_GCC_VERSION (__GNUC__ * 100 + __GNUC_MINOR__)
+#else
+#define AFMT_GCC_VERSION 0
 #endif
 
-// Define fallback for if constexpr
-#if AFMT_HAS_CXX_17
-#define AFMT_IF_CONSTEXPR if constexpr
+// Detect C++14 relaxed constexpr.
+#ifdef AFMT_USE_CONSTEXPR
+#elif AFMT_GCC_VERSION >= 702 && AFMT_HAS_CXX_14
+#define AFMT_USE_CONSTEXPR 1
 #else
-#define AFMT_IF_CONSTEXPR if
+#define AFMT_USE_CONSTEXPR 0
+#endif
+#if AFMT_USE_CONSTEXPR
+#define AFMT_CONSTEXPR constexpr
+#else
+#define AFMT_CONSTEXPR
+#endif
+
+// Define namespace macros
+#ifndef AFMT_BEGIN_NAMESPACE
+#define AFMT_BEGIN_NAMESPACE \
+    namespace afmt           \
+    {
+#define AFMT_END_NAMESPACE }
 #endif
 
 namespace afmt
 {
+
     // Helper struct for variant-like visitation
     struct monostate
     {
+        AFMT_CONSTEXPR monostate() {}
     };
 
     // =============== Type Definitions ===============
 
-    // Basic character types
-    using char_type = char;
-    using size_type = size_t; // Use native size_t to minimize STL
-
-    // Helper function for constexpr string length calculation
-    constexpr size_type string_length(const char_type *s)
+    // Helper function for AFMT_CONSTEXPR string length calculation
+    AFMT_CONSTEXPR size_t string_length(const char *s)
     {
         return s == nullptr ? 0 : *s == '\0' ? 0
                                              : 1 + string_length(s + 1);
@@ -80,21 +96,24 @@ namespace afmt
     {
         // Common specifiers
         none = 0,
-        debug = 1,   // '?'
-        string = 2,  // 's' (string, bool)
-                     // Integral, bool and character specifiers
-        dec = 3,     // 'd'
-        hex,         // 'x' or 'X'
-        oct,         // 'o'
-        bin,         // 'b' or 'B'
-        chr,         // 'c'
-                     // String and pointer specifiers:
+        debug = 1,  // '?'
+        string = 2, // 's' (string, bool)
+
+        // Integral, bool and character specifiers
+        dec = 3, // 'd'
+        hex,     // 'x' or 'X'
+        oct,     // 'o'
+        bin,     // 'b' or 'B'
+        chr,     // 'c'
+
+        // String and pointer specifiers:
         pointer = 3, // 'p'
-                     // Floating-point specifiers
-        exp = 1,     // 'e' or 'E'
-        fixed,       // 'f' or 'F'
-        general,     // 'g' or 'G'
-        hexfloat     // 'a' or 'A'
+
+        // Floating-point specifiers
+        exp = 1, // 'e' or 'E'
+        fixed,   // 'f' or 'F'
+        general, // 'g' or 'G'
+        hexfloat // 'a' or 'A'
     };
 
     // Format specification options
@@ -120,24 +139,24 @@ namespace afmt
     class string_view
     {
     private:
-        const char_type *data_;
-        size_type size_;
+        const char *data_;
+        size_t size_;
 
     public:
         // Constructors
-        constexpr string_view() : data_(nullptr), size_(0) {}
-        constexpr string_view(const char_type *s, size_type count) : data_(s), size_(count) {}
-
-        // Constructor from C string - now correctly initializes size_ in the initializer list
-        constexpr string_view(const char_type *s) : data_(s), size_(string_length(s)) {}
+        AFMT_CONSTEXPR string_view() : data_(nullptr), size_(0) {}
+        AFMT_CONSTEXPR string_view(const char *s, size_t count) : data_(s), size_(count) {}
+        AFMT_CONSTEXPR string_view(const char *s) : data_(s), size_(string_length(s)) {}
+        template <size_t N>
+        AFMT_CONSTEXPR string_view(const char (&s)[N]) : data_(s), size_(N - 1) {}
 
         // Basic accessors
-        constexpr const char_type *data() const { return data_; }
-        constexpr size_type size() const { return size_; }
-        constexpr bool empty() const { return size_ == 0; }
+        AFMT_CONSTEXPR const char *data() const { return data_; }
+        AFMT_CONSTEXPR size_t size() const { return size_; }
+        AFMT_CONSTEXPR bool empty() const { return size_ == 0; }
 
         // Substring extraction - fixed for C++11 compatibility with pure expression
-        constexpr string_view substr(size_type pos, size_type count = ~static_cast<size_type>(0)) const
+        AFMT_CONSTEXPR string_view substr(size_t pos, size_t count = ~static_cast<size_t>(0)) const
         {
             return string_view(
                 data_ + (pos > size_ ? size_ : pos),
@@ -145,25 +164,25 @@ namespace afmt
         }
 
         // Comparison operators - fixed for C++11 compatibility with pure expression
-        constexpr bool operator==(const string_view &other) const
+        AFMT_CONSTEXPR bool operator==(const string_view &other) const
         {
             return size_ == other.size_ ? equal_strings(data_, other.data_, size_) : false;
         }
 
         // Helper for equality comparison
-        static constexpr bool equal_strings(const char_type *s1, const char_type *s2, size_type n)
+        static AFMT_CONSTEXPR bool equal_strings(const char *s1, const char *s2, size_t n)
         {
             return n == 0 ? true : *s1 != *s2 ? false
                                               : equal_strings(s1 + 1, s2 + 1, n - 1);
         }
 
-        constexpr bool operator!=(const string_view &other) const
+        AFMT_CONSTEXPR bool operator!=(const string_view &other) const
         {
             return !(*this == other);
         }
 
         // Element access
-        constexpr char_type operator[](size_type pos) const
+        AFMT_CONSTEXPR char operator[](size_t pos) const
         {
             return data_[pos];
         }
@@ -175,12 +194,12 @@ namespace afmt
     {
     private:
         T *data_;
-        size_type size_;
-        size_type capacity_;
+        size_t size_;
+        size_t capacity_;
 
     public:
         buffer() : data_(nullptr), size_(0), capacity_(0) {}
-        buffer(size_type initial_capacity) : size_(0), capacity_(initial_capacity)
+        buffer(size_t initial_capacity) : size_(0), capacity_(initial_capacity)
         {
             data_ = initial_capacity > 0 ? new T[initial_capacity] : nullptr;
         }
@@ -218,12 +237,12 @@ namespace afmt
         // Accessors
         T *data() { return data_; }
         const T *data() const { return data_; }
-        size_type size() const { return size_; }
-        size_type capacity() const { return capacity_; }
+        size_t size() const { return size_; }
+        size_t capacity() const { return capacity_; }
 
         // Operations
         void clear() { size_ = 0; }
-        void resize(size_type new_size)
+        void resize(size_t new_size)
         {
             if (new_size > capacity_)
             {
@@ -232,16 +251,16 @@ namespace afmt
             size_ = new_size;
         }
 
-        void reserve(size_type new_capacity)
+        void reserve(size_t new_capacity)
         {
             if (new_capacity > capacity_)
             {
-                size_type target_capacity = capacity_ == 0 ? 16 : capacity_ * 2;
+                size_t target_capacity = capacity_ == 0 ? 16 : capacity_ * 2;
                 if (target_capacity < new_capacity)
                     target_capacity = new_capacity;
 
                 T *new_data = new T[target_capacity];
-                for (size_type i = 0; i < size_; ++i)
+                for (size_t i = 0; i < size_; ++i)
                 {
                     new_data[i] = data_[i];
                 }
@@ -263,33 +282,33 @@ namespace afmt
 
         void append(const T *begin, const T *end)
         {
-            size_type count = end - begin;
-            size_type new_size = size_ + count;
+            size_t count = end - begin;
+            size_t new_size = size_ + count;
             if (new_size > capacity_)
             {
                 reserve(new_size);
             }
-            for (size_type i = 0; i < count; ++i)
+            for (size_t i = 0; i < count; ++i)
             {
                 data_[size_ + i] = begin[i];
             }
             size_ = new_size;
         }
 
-        T &operator[](size_type pos) { return data_[pos]; }
-        const T &operator[](size_type pos) const { return data_[pos]; }
+        T &operator[](size_t pos) { return data_[pos]; }
+        const T &operator[](size_t pos) const { return data_[pos]; }
     };
 
     // Basic iterator for output operations - moved before context to fix declaration order
     class appender
     {
     private:
-        buffer<char_type> *buffer_;
+        buffer<char> *buffer_;
 
     public:
-        explicit appender(buffer<char_type> &buf) : buffer_(&buf) {}
+        explicit appender(buffer<char> &buf) : buffer_(&buf) {}
 
-        appender &operator=(char_type c)
+        appender &operator=(char c)
         {
             buffer_->push_back(c);
             return *this;
@@ -380,7 +399,6 @@ namespace afmt
         appender out_;
 
     public:
-        using char_type = char;
         using iterator = appender;
 
         explicit context(appender out) : out_(out) {}
@@ -689,7 +707,7 @@ namespace afmt
         struct string_view_data
         {
             const char *data;
-            size_type size;
+            size_t size;
         };
 
         type type_;
@@ -1094,7 +1112,7 @@ namespace afmt
         // string_view type
         if (value.data())
         {
-            for (size_type i = 0; i < value.size(); ++i)
+            for (size_t i = 0; i < value.size(); ++i)
             {
                 out.push_back(value.data()[i]);
             }
@@ -1266,7 +1284,7 @@ namespace afmt
     void format_to(buffer<char> &buf, string_view fmt, const Args &...args)
     {
         // Handle the case of no arguments gracefully to avoid zero-size array
-        constexpr size_t arg_count = sizeof...(args);
+        AFMT_CONSTEXPR size_t arg_count = sizeof...(args);
         format_arg_value values[arg_count > 0 ? arg_count : 1] = {format_arg_value(args)...};
         format_args fargs(values, arg_count);
         vformat_to(buf, fmt, fargs);
@@ -1280,8 +1298,8 @@ namespace afmt
         format_to(buf, fmt, args...);
 
         // Copy to the fixed array with null termination
-        size_type size = buf.size() < N - 1 ? buf.size() : N - 1;
-        for (size_type i = 0; i < size; ++i)
+        size_t size = buf.size() < N - 1 ? buf.size() : N - 1;
+        for (size_t i = 0; i < size; ++i)
         {
             out[i] = buf.data()[i];
         }
@@ -1290,7 +1308,7 @@ namespace afmt
 
     // Format to a buffer with size limitation
     template <typename... Args>
-    void format_to_n(char *out, size_type n, string_view fmt, const Args &...args)
+    void format_to_n(char *out, size_t n, string_view fmt, const Args &...args)
     {
         if (n == 0)
             return; // No space to write anything
@@ -1299,8 +1317,8 @@ namespace afmt
         format_to(buf, fmt, args...);
 
         // Copy to the output buffer
-        size_type size = buf.size() < n - 1 ? buf.size() : n - 1;
-        for (size_type i = 0; i < size; ++i)
+        size_t size = buf.size() < n - 1 ? buf.size() : n - 1;
+        for (size_t i = 0; i < size; ++i)
         {
             out[i] = buf.data()[i];
         }
@@ -1309,7 +1327,7 @@ namespace afmt
 
     // Get the size that would be required for formatting
     template <typename... Args>
-    size_type formatted_size(string_view fmt, const Args &...args)
+    size_t formatted_size(string_view fmt, const Args &...args)
     {
         buffer<char> buf;
         format_to(buf, fmt, args...);
@@ -1330,7 +1348,7 @@ namespace afmt
     std::string format(string_view fmt, const Args &...args)
     {
         // Handle the case of no arguments gracefully to avoid zero-size array
-        constexpr size_t arg_count = sizeof...(args);
+        AFMT_CONSTEXPR size_t arg_count = sizeof...(args);
         format_arg_value values[arg_count > 0 ? arg_count : 1] = {format_arg_value(args)...};
         format_args fargs(values, arg_count);
         return vformat(fmt, fargs);
@@ -1352,7 +1370,7 @@ namespace afmt
     String aformat(string_view fmt, const Args &...args)
     {
         // Handle the case of no arguments gracefully to avoid zero-size array
-        constexpr size_t arg_count = sizeof...(args);
+        AFMT_CONSTEXPR size_t arg_count = sizeof...(args);
         format_arg_value values[arg_count > 0 ? arg_count : 1] = {format_arg_value(args)...};
         format_args fargs(values, arg_count);
         return avformat(fmt, fargs);
@@ -1361,7 +1379,7 @@ namespace afmt
     template <typename... Args>
     void print(string_view fmt, const Args &...args)
     {
-        constexpr size_t arg_count = sizeof...(args);
+        AFMT_CONSTEXPR size_t arg_count = sizeof...(args);
         format_arg_value values[arg_count > 0 ? arg_count : 1] = {format_arg_value(args)...};
         format_args fargs(values, arg_count);
 
@@ -1371,7 +1389,7 @@ namespace afmt
     template <typename... Args>
     void println(string_view fmt, const Args &...args)
     {
-        constexpr size_t arg_count = sizeof...(args);
+        AFMT_CONSTEXPR size_t arg_count = sizeof...(args);
         format_arg_value values[arg_count > 0 ? arg_count : 1] = {format_arg_value(args)...};
         format_args fargs(values, arg_count);
 
