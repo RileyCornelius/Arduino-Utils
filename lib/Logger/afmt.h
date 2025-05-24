@@ -69,27 +69,6 @@ AFMT_CONSTEXPR size_t string_length(const char *s)
                                          : 1 + string_length(s + 1);
 }
 
-// Type identification for formatting
-enum class type
-{
-    none_type,
-    // Integer types
-    int_type,
-    uint_type,
-    long_long_type,
-    ulong_long_type,
-    bool_type,
-    char_type,
-    last_integer_type = char_type,
-    // Floating-point types
-    float_type,
-    double_type,
-    last_numeric_type = double_type,
-    cstring_type,
-    string_type,
-    pointer_type
-};
-
 // Format specifier types
 enum class presentation_type : unsigned char
 {
@@ -298,26 +277,6 @@ public:
     const T &operator[](size_t pos) const { return data_[pos]; }
 };
 
-// Basic iterator for output operations - moved before context to fix declaration order
-class appender
-{
-private:
-    buffer<char> *buffer_;
-
-public:
-    AFMT_CONSTEXPR explicit appender(buffer<char> &buf) : buffer_(&buf) {}
-
-    appender &operator=(char c)
-    {
-        buffer_->push_back(c);
-        return *this;
-    }
-
-    AFMT_CONSTEXPR appender &operator*() { return *this; }
-    AFMT_CONSTEXPR appender &operator++() { return *this; }
-    AFMT_CONSTEXPR appender &operator++(int) { return *this; }
-};
-
 // =============== Format Specifications ===============
 
 // Basic format specifications
@@ -390,22 +349,6 @@ public:
     }
 };
 
-// =============== Formatting Context ===============
-
-// class context
-// {
-// private:
-//     appender out_;
-
-// public:
-//     using iterator = appender;
-
-//     AFMT_CONSTEXPR explicit context(appender out) : out_(out) {}
-
-//     AFMT_CONSTEXPR appender out() const { return out_; }
-//     AFMT_CONSTEXPR void advance_to(appender) {} // No-op
-// };
-
 // =============== Parsing Functions ===============
 
 // Parse a non-negative integer
@@ -452,7 +395,7 @@ AFMT_CONSTEXPR inline align parse_align(char c)
 // Parse format specifications
 inline const char *parse_format_specs(
     const char *begin, const char *end,
-    format_specs &specs, parse_context &ctx, type arg_type)
+    format_specs &specs, parse_context &ctx)
 {
     if (begin == end)
         return begin;
@@ -1223,7 +1166,7 @@ inline const char *parse_replacement_field(const char *begin, const char *end,
     if (*begin == ':')
     {
         ++begin;
-        begin = parse_format_specs(begin, end, specs, ctx, type::none_type);
+        begin = parse_format_specs(begin, end, specs, ctx);
     }
 
     if (begin == end || *begin != '}')
