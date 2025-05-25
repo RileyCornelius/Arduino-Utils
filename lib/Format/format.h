@@ -49,6 +49,13 @@
 #define AFMT_END_NAMESPACE }
 #endif
 
+// =================== Config =====================
+#if AFMT_HAS_ARDUINO
+#ifndef AFMT_SERIAL_OUTPUT
+#define AFMT_SERIAL_OUTPUT Serial
+#endif
+#endif
+
 // Default SBO size for the buffer
 #ifndef AFMT_DEFAULT_ADAPTIVE_SBO_SIZE
 #define AFMT_DEFAULT_ADAPTIVE_SBO_SIZE 64
@@ -670,60 +677,86 @@ inline const char *parse_format_specs(
         switch (c)
         {
         case 'd':
-            specs.set_type(presentation_type::dec);
+            specs.type = presentation_type::dec;
+            specs.upper = false;
+            ++begin;
             break;
         case 'x':
-            specs.set_type(presentation_type::hex);
+            specs.type = presentation_type::hex;
+            specs.upper = false;
+            ++begin;
             break;
         case 'X':
-            specs.set_type(presentation_type::hex);
-            specs.set_upper();
+            specs.type = presentation_type::hex;
+            specs.upper = true;
+            ++begin;
             break;
         case 'o':
-            specs.set_type(presentation_type::oct);
+            specs.type = presentation_type::oct;
+            specs.upper = false;
+            ++begin;
             break;
         case 'b':
-            specs.set_type(presentation_type::bin);
+            specs.type = presentation_type::bin;
+            specs.upper = false;
+            ++begin;
             break;
         case 'B':
-            specs.set_type(presentation_type::bin);
-            specs.set_upper();
+            specs.type = presentation_type::bin;
+            specs.upper = true;
+            ++begin;
             break;
         case 'e':
-            specs.set_type(presentation_type::exp);
+            specs.type = presentation_type::exp;
+            specs.upper = false;
+            ++begin;
             break;
         case 'E':
-            specs.set_type(presentation_type::exp);
-            specs.set_upper();
+            specs.type = presentation_type::exp;
+            specs.upper = true;
+            ++begin;
             break;
         case 'f':
-            specs.set_type(presentation_type::fixed);
+            specs.type = presentation_type::fixed;
+            specs.upper = false;
+            ++begin;
             break;
         case 'F':
-            specs.set_type(presentation_type::fixed);
-            specs.set_upper();
+            specs.type = presentation_type::fixed;
+            specs.upper = true;
+            ++begin;
             break;
         case 'g':
-            specs.set_type(presentation_type::general);
+            specs.type = presentation_type::general;
+            specs.upper = false;
+            ++begin;
             break;
         case 'G':
-            specs.set_type(presentation_type::general);
-            specs.set_upper();
+            specs.type = presentation_type::general;
+            specs.upper = true;
+            ++begin;
             break;
         case 'c':
-            specs.set_type(presentation_type::chr);
+            specs.type = presentation_type::chr;
+            specs.upper = false;
+            ++begin;
             break;
         case 's':
-            specs.set_type(presentation_type::string);
+            specs.type = presentation_type::string;
+            specs.upper = false;
+            ++begin;
             break;
         case 'p':
-            specs.set_type(presentation_type::pointer);
+            specs.type = presentation_type::pointer;
+            specs.upper = false;
+            ++begin;
             break;
         case '?':
-            specs.set_type(presentation_type::debug);
+            specs.type = presentation_type::debug;
+            specs.upper = false;
+            ++begin;
             break;
         }
-        ++begin;
     }
 
     return begin;
@@ -967,10 +1000,6 @@ void to_string(T value, buffer_type &out, format_specs specs)
 template <typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
 inline void to_string(double value, buffer_type &out, format_specs specs)
 {
-    // Simple implementation that doesn't handle all format options
-    char buffer[32];
-    int precision = specs.precision >= 0 ? specs.precision : 6;
-
     // Handle special cases
     if (value != value)
     { // NaN
@@ -983,13 +1012,59 @@ inline void to_string(double value, buffer_type &out, format_specs specs)
     if (value == 0.0)
     {
         out.push_back('0');
-        if (precision > 0)
+        int precision = specs.precision >= 0 ? specs.precision : 6;
+        if (precision > 0 && (specs.type == presentation_type::fixed ||
+                              specs.type == presentation_type::exp ||
+                              specs.type == presentation_type::general))
         {
             out.push_back('.');
             for (int i = 0; i < precision; ++i)
             {
                 out.push_back('0');
             }
+        }
+        // Add exponent for scientific notation
+        if (specs.type == presentation_type::exp)
+        {
+            out.push_back(specs.upper ? 'E' : 'e');
+            out.push_back('+');
+            out.push_back('0');
+            out.push_back('0');
+        }
+        return;
+    }
+
+    // Handle infinity
+    if (value == value + 1.0 && value > 0) // Positive infinity
+    {
+        if (specs.upper)
+        {
+            out.push_back('I');
+            out.push_back('N');
+            out.push_back('F');
+        }
+        else
+        {
+            out.push_back('i');
+            out.push_back('n');
+            out.push_back('f');
+        }
+        return;
+    }
+    if (value == value + 1.0 && value < 0) // Negative infinity
+    {
+        out.push_back('-');
+        if (specs.upper)
+        {
+            out.push_back('I');
+            out.push_back('N');
+            out.push_back('F');
+        }
+        else
+        {
+            out.push_back('i');
+            out.push_back('n');
+            out.push_back('f');
         }
         return;
     }
@@ -1010,40 +1085,170 @@ inline void to_string(double value, buffer_type &out, format_specs specs)
         out.push_back(' ');
     }
 
-    // Apply rounding to the entire number based on precision
-    double scale = 1.0;
-    for (int i = 0; i < precision; ++i)
+    int precision = specs.precision >= 0 ? specs.precision : 6;
+
+    // Determine format type
+    presentation_type format_type = specs.type;
+    if (format_type == presentation_type::none)
     {
-        scale *= 10.0;
+        format_type = presentation_type::general; // Default to general format
     }
-    value = (value * scale + 0.5) / scale;
 
-    // Extract integer part
-    unsigned long long int_part = static_cast<unsigned long long>(value);
-    double frac_part = value - int_part;
-
-    // Convert integer part
-    if (int_part == 0)
+    // Handle general format - choose between fixed and scientific
+    if (format_type == presentation_type::general)
     {
-        out.push_back('0');
+        // Calculate exponent to decide format
+        int exponent = 0;
+        double temp_value = value;
+        if (temp_value >= 1.0)
+        {
+            while (temp_value >= 10.0)
+            {
+                temp_value /= 10.0;
+                exponent++;
+            }
+        }
+        else if (temp_value > 0.0)
+        {
+            while (temp_value < 1.0)
+            {
+                temp_value *= 10.0;
+                exponent--;
+            }
+        }
+
+        // Use scientific notation if exponent is outside [-4, precision)
+        if (exponent < -4 || exponent >= precision)
+        {
+            format_type = presentation_type::exp;
+        }
+        else
+        {
+            format_type = presentation_type::fixed;
+            // Adjust precision for general format
+            precision = precision - exponent - 1;
+            if (precision < 0)
+                precision = 0;
+        }
+    }
+
+    if (format_type == presentation_type::exp)
+    {
+        // Scientific notation
+        int exponent = 0;
+
+        // Normalize the number to [1.0, 10.0)
+        if (value >= 1.0)
+        {
+            while (value >= 10.0)
+            {
+                value /= 10.0;
+                exponent++;
+            }
+        }
+        else if (value > 0.0)
+        {
+            while (value < 1.0)
+            {
+                value *= 10.0;
+                exponent--;
+            }
+        }
+
+        // Apply rounding based on precision
+        double scale = 1.0;
+        for (int i = 0; i < precision; ++i)
+        {
+            scale *= 10.0;
+        }
+        value = (value * scale + 0.5) / scale;
+
+        // Handle case where rounding pushes us to 10.0
+        if (value >= 10.0)
+        {
+            value /= 10.0;
+            exponent++;
+        }
+
+        // Format the mantissa
+        unsigned long long int_part = static_cast<unsigned long long>(value);
+        double frac_part = value - int_part;
+
+        // Output integer part
+        out.push_back('0' + int_part);
+
+        // Output fractional part
+        if (precision > 0)
+        {
+            out.push_back('.');
+            for (int i = 0; i < precision; ++i)
+            {
+                frac_part *= 10;
+                int digit = static_cast<int>(frac_part);
+                out.push_back('0' + digit);
+                frac_part -= digit;
+            }
+        }
+
+        // Output exponent
+        out.push_back(specs.upper ? 'E' : 'e');
+        if (exponent >= 0)
+        {
+            out.push_back('+');
+        }
+        else
+        {
+            out.push_back('-');
+            exponent = -exponent;
+        }
+
+        // Format exponent with at least 2 digits
+        if (exponent >= 100)
+        {
+            out.push_back('0' + (exponent / 100));
+            exponent %= 100;
+        }
+        out.push_back('0' + (exponent / 10));
+        out.push_back('0' + (exponent % 10));
     }
     else
     {
-        to_string(int_part, out, format_specs());
-    }
-
-    // Add decimal point and fractional part
-    if (precision > 0)
-    {
-        out.push_back('.');
-
-        // Convert fractional part to digits
+        // Fixed-point notation (default case from original implementation)
+        // Apply rounding to the entire number based on precision
+        double scale = 1.0;
         for (int i = 0; i < precision; ++i)
         {
-            frac_part *= 10;
-            int digit = static_cast<int>(frac_part);
-            out.push_back('0' + digit);
-            frac_part -= digit;
+            scale *= 10.0;
+        }
+        value = (value * scale + 0.5) / scale;
+
+        // Extract integer part
+        unsigned long long int_part = static_cast<unsigned long long>(value);
+        double frac_part = value - int_part;
+
+        // Convert integer part
+        if (int_part == 0)
+        {
+            out.push_back('0');
+        }
+        else
+        {
+            to_string(int_part, out, format_specs());
+        }
+
+        // Add decimal point and fractional part
+        if (precision > 0)
+        {
+            out.push_back('.');
+
+            // Convert fractional part to digits
+            for (int i = 0; i < precision; ++i)
+            {
+                frac_part *= 10;
+                int digit = static_cast<int>(frac_part);
+                out.push_back('0' + digit);
+                frac_part -= digit;
+            }
         }
     }
 }
@@ -1632,13 +1837,13 @@ inline String aformat(string_view fmt, const Args &...args)
 template <typename... Args>
 inline void print(string_view fmt, const Args &...args)
 {
-    Serial.print(avformat(fmt, make_format_args(args...)));
+    AFMT_SERIAL_OUTPUT.print(avformat(fmt, make_format_args(args...)));
 }
 
 template <typename... Args>
 inline void println(string_view fmt, const Args &...args)
 {
-    Serial.println(avformat(fmt, make_format_args(args...)));
+    AFMT_SERIAL_OUTPUT.println(avformat(fmt, make_format_args(args...)));
 }
 #endif
 

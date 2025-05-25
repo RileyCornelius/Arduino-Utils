@@ -135,62 +135,181 @@ void test_format_to_scientific_notation()
 {
 	char buffer[50];
 
-	// Note: The current float formatting is basic and likely does not support 'e'/'E'.
-	// These tests check for either proper scientific notation or graceful fallback.
-
 	// Test lowercase scientific notation
 	afmt::format_to(buffer, "Sci: {:.2e}", 12345.6789);
-	// Expected: "Sci: 1.23e+04" if :e is implemented
-	// Fallback: likely defaults to regular float formatting
-
-	// For now, test what the current implementation produces
-	// This test will help identify when :e support is added
-	printf("Scientific notation test output: %s\n", buffer);
-	TEST_ASSERT_TRUE_MESSAGE(strlen(buffer) > 0, "Scientific notation produces output");
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Sci: 1.23e+04", buffer, "Scientific notation lowercase");
 
 	// Test uppercase scientific notation
-	afmt::format_to(buffer, "Sci: {:.3E}", 0.00098765);
-	// Expected: "Sci: 9.877E-04" if :E is implemented
-	printf("Uppercase scientific test output: %s\n", buffer);
-	TEST_ASSERT_TRUE_MESSAGE(strlen(buffer) > 0, "Uppercase scientific produces output");
+	afmt::format_to(buffer, "Sci: {:.3E}", 98765.4321);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Sci: 9.877E+04", buffer, "Scientific notation uppercase");
 
-	// Test scientific with zero
-	afmt::format_to(buffer, "SciZero: {:.1e}", 0.0);
-	// Expected: "SciZero: 0.0e+00" if :e is implemented
-	printf("Scientific zero test output: %s\n", buffer);
-	TEST_ASSERT_TRUE_MESSAGE(strlen(buffer) > 0, "Scientific zero produces output");
+	// Test small numbers in scientific notation
+	afmt::format_to(buffer, "Small: {:.2e}", 0.00012345);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Small: 1.23e-04", buffer, "Scientific small number");
+
+	// Test very small numbers
+	afmt::format_to(buffer, "VerySmall: {:.1E}", 0.000000987);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("VerySmall: 9.9E-07", buffer, "Scientific very small number");
+
+	// Test zero in scientific notation
+	afmt::format_to(buffer, "Zero: {:.2e}", 0.0);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Zero: 0.00e+00", buffer, "Scientific zero");
+
+	// Test negative numbers
+	afmt::format_to(buffer, "Neg: {:.1e}", -1234.5);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Neg: -1.2e+03", buffer, "Scientific negative");
+
+	// Test with different precisions
+	afmt::format_to(buffer, "Precision: {:.0e}", 1234.5);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Precision: 1e+03", buffer, "Scientific zero precision");
+
+	afmt::format_to(buffer, "Precision: {:.4e}", 1234.5);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Precision: 1.2345e+03", buffer, "Scientific high precision");
+
+	// Test edge case: exactly 1.0
+	afmt::format_to(buffer, "One: {:.2e}", 1.0);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("One: 1.00e+00", buffer, "Scientific notation for 1.0");
+
+	// Test numbers that normalize to 10.0 (should become 1.0e+01)
+	afmt::format_to(buffer, "Ten: {:.1e}", 9.99999);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Ten: 1.0e+01", buffer, "Scientific rounding to 10");
 }
 
 void test_format_to_general_notation()
 {
 	char buffer[50];
 
-	// Note: The current float formatting is basic and likely does not support 'g'/'G'.
-	// These tests check for either proper general notation or graceful fallback.
-
-	// Test general notation (should prefer fixed for this case)
+	// Test general notation - should use fixed point for reasonable numbers
 	afmt::format_to(buffer, "Gen: {:.3g}", 123.456);
-	// Expected: "Gen: 123" (3 significant digits) if :g is implemented
-	printf("General notation test output: %s\n", buffer);
-	TEST_ASSERT_TRUE_MESSAGE(strlen(buffer) > 0, "General notation produces output");
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Gen: 123", buffer, "General notation fixed point");
 
-	// Test general notation (should prefer scientific for large numbers)
-	afmt::format_to(buffer, "GenLarge: {:.3g}", 1234567.0);
-	// Expected: "GenLarge: 1.23e+06" if :g is implemented
-	printf("General large number test output: %s\n", buffer);
-	TEST_ASSERT_TRUE_MESSAGE(strlen(buffer) > 0, "General large number produces output");
+	// Test general notation - should use scientific for large numbers
+	afmt::format_to(buffer, "Large: {:.3g}", 1234567.0);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Large: 1.23e+06", buffer, "General notation large number");
 
 	// Test uppercase general notation
-	afmt::format_to(buffer, "GenUpper: {:.3G}", 0.00012345);
-	// Expected: "GenUpper: 1.23E-04" if :G is implemented
-	printf("Uppercase general test output: %s\n", buffer);
-	TEST_ASSERT_TRUE_MESSAGE(strlen(buffer) > 0, "Uppercase general produces output");
+	afmt::format_to(buffer, "Upper: {:.3G}", 1234567.0);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Upper: 1.23E+06", buffer, "General notation uppercase");
 
-	// Test general with small number
-	afmt::format_to(buffer, "GenSmall: {:.4g}", 0.001234);
-	// Expected: "GenSmall: 0.001234" if :g is implemented
-	printf("General small number test output: %s\n", buffer);
-	TEST_ASSERT_TRUE_MESSAGE(strlen(buffer) > 0, "General small number produces output");
+	// Test small numbers that should use fixed point
+	afmt::format_to(buffer, "Small: {:.4g}", 0.001234);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Small: 0.001234", buffer, "General small fixed point");
+
+	// Test very small numbers that should use scientific
+	afmt::format_to(buffer, "VerySmall: {:.3g}", 0.00001234);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("VerySmall: 1.23e-05", buffer,
+									 "General very small scientific");
+
+	// Test numbers at the boundary (exponent = -4)
+	afmt::format_to(buffer, "Boundary: {:.3g}", 0.0001);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Boundary: 0.0001", buffer, "General boundary case -4");
+
+	afmt::format_to(buffer, "Boundary: {:.3g}", 0.00001);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Boundary: 1e-05", buffer, "General boundary case -5");
+
+	// Test numbers at upper boundary (exponent >= precision)
+	afmt::format_to(buffer, "UpperBound: {:.3g}", 999.0);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("UpperBound: 999", buffer, "General upper boundary fixed");
+
+	afmt::format_to(buffer, "UpperBound: {:.3g}", 1000.0);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("UpperBound: 1e+03", buffer,
+									 "General upper boundary scientific");
+
+	// Test zero
+	afmt::format_to(buffer, "Zero: {:.3g}", 0.0);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Zero: 0", buffer, "General notation zero");
+
+	// Test negative numbers
+	afmt::format_to(buffer, "Neg: {:.2g}", -123.45);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Neg: -1.2e+02", buffer, "General negative number");
+
+	// Test precision adjustment in general format
+	afmt::format_to(buffer, "Adjust: {:.4g}", 12.345);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Adjust: 12.35", buffer, "General precision adjustment");
+
+	// Test trailing zeros removal in general format
+	afmt::format_to(buffer, "Trailing: {:.6g}", 123.0);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Trailing: 123", buffer, "General trailing zeros removed");
+}
+
+void test_format_to_scientific_edge_cases()
+{
+	char buffer[50];
+
+	// Test infinity (if supported)
+	double inf = 1.0 / 0.0;
+	afmt::format_to(buffer, "Inf: {:.2e}", inf);
+	TEST_ASSERT_TRUE_MESSAGE(strstr(buffer, "inf") != nullptr || strstr(buffer, "INF") != nullptr,
+							 "Scientific infinity");
+
+	// Test negative infinity
+	double neg_inf = -1.0 / 0.0;
+	afmt::format_to(buffer, "NegInf: {:.2e}", neg_inf);
+	TEST_ASSERT_TRUE_MESSAGE(strstr(buffer, "-inf") != nullptr || strstr(buffer, "-INF") != nullptr,
+							 "Scientific negative infinity");
+
+	// Test NaN (if supported)
+	double nan_val = 0.0 / 0.0;
+	afmt::format_to(buffer, "NaN: {:.2e}", nan_val);
+	TEST_ASSERT_TRUE_MESSAGE(strstr(buffer, "nan") != nullptr || strstr(buffer, "NaN") != nullptr,
+							 "Scientific NaN");
+
+	// Test very large exponents
+	afmt::format_to(buffer, "Large: {:.1e}", 1e20);
+	TEST_ASSERT_TRUE_MESSAGE(strstr(buffer, "e+20") != nullptr ||
+								 strstr(buffer, "e+020") != nullptr,
+							 "Scientific large exponent");
+
+	// Test very small exponents
+	afmt::format_to(buffer, "Small: {:.1e}", 1e-20);
+	TEST_ASSERT_TRUE_MESSAGE(strstr(buffer, "e-20") != nullptr ||
+								 strstr(buffer, "e-020") != nullptr,
+							 "Scientific small exponent");
+}
+
+void test_format_to_general_edge_cases()
+{
+	char buffer[50];
+
+	// Test infinity in general format
+	double inf = 1.0 / 0.0;
+	afmt::format_to(buffer, "Inf: {:.2g}", inf);
+	TEST_ASSERT_TRUE_MESSAGE(strstr(buffer, "inf") != nullptr || strstr(buffer, "INF") != nullptr,
+							 "General infinity");
+
+	// Test NaN in general format
+	double nan_val = 0.0 / 0.0;
+	afmt::format_to(buffer, "NaN: {:.2g}", nan_val);
+	TEST_ASSERT_TRUE_MESSAGE(strstr(buffer, "nan") != nullptr || strstr(buffer, "NaN") != nullptr,
+							 "General NaN");
+
+	// Test precision of 0 (should default to 1)
+	afmt::format_to(buffer, "ZeroPrec: {:.0g}", 123.456);
+	TEST_ASSERT_TRUE_MESSAGE(strlen(buffer) > 0, "General zero precision");
+
+	// Test very high precision
+	afmt::format_to(buffer, "HighPrec: {:.10g}", 3.141592653589793);
+	TEST_ASSERT_TRUE_MESSAGE(strlen(buffer) > 0, "General high precision");
+}
+
+void test_format_to_mixed_scientific_general()
+{
+	char buffer[100];
+
+	// Test mixing different format types in one string
+	afmt::format_to(buffer, "Fixed: {:.2f}, Sci: {:.2e}, Gen: {:.3g}", 123.456, 123.456, 123.456);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Fixed: 123.46, Sci: 1.23e+02, Gen: 123", buffer,
+									 "Mixed formatting types");
+
+	// Test different cases of scientific notation
+	afmt::format_to(buffer, "Lower: {:.1e}, Upper: {:.1E}", 1234.5, 1234.5);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Lower: 1.2e+03, Upper: 1.2E+03", buffer,
+									 "Scientific case comparison");
+
+	// Test different cases of general notation
+	afmt::format_to(buffer, "Lower: {:.3g}, Upper: {:.3G}", 123456.0, 123456.0);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Lower: 1.23e+05, Upper: 1.23E+05", buffer,
+									 "General case comparison");
 }
 
 /*------------------------------------------------------------------------------
@@ -387,6 +506,9 @@ void tests()
 	RUN_TEST(test_format_to_zero_padding);
 	RUN_TEST(test_format_to_scientific_notation);
 	RUN_TEST(test_format_to_general_notation);
+	RUN_TEST(test_format_to_scientific_edge_cases);
+	RUN_TEST(test_format_to_general_edge_cases);
+	RUN_TEST(test_format_to_mixed_scientific_general);
 
 	// format_to_n tests
 	RUN_TEST(test_format_to_n_basic);
