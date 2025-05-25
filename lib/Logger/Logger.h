@@ -281,7 +281,7 @@ namespace _logger
 #define LOG_PRINTF(msg, ...) LOG_OUTPUT.print(fmt::format(msg, ##__VA_ARGS__).c_str())
 // Default to printf
 #elif LOG_PRINT_TYPE == LOG_PRINT_TYPE_CUSTOM_FORMAT
-#include <afmt.h>
+#include <format.h>
 #define LOG_PRINTF(msg, ...) LOG_OUTPUT.print(afmt::aformat(msg, ##__VA_ARGS__))
 #else
 #define LOG_PRINTF(msg, ...) _logger::printf(msg, ##__VA_ARGS__)
