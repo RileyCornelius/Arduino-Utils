@@ -623,6 +623,18 @@ inline const char *parse_format_specs(
         c = *begin;
     }
 
+    // Parse zero padding and width
+    if (c == '0')
+    {
+        // Zero padding detected - set fill to '0' and alignment to numeric
+        specs.fill = '0';
+        specs.set_align(align::numeric);
+        ++begin;
+        if (begin == end)
+            return begin;
+        c = *begin;
+    }
+
     // Parse width
     if (c >= '0' && c <= '9')
     {
@@ -1112,6 +1124,76 @@ void format_value(const T &value, buffer_type &out, format_specs specs)
         {
             specs.alignment = align::left; // Other types are left-aligned by default
         }
+    }
+
+    // Zero padding should only apply to numeric types (not strings, chars, etc.)
+    // For non-numeric types, convert zero padding to space padding
+    if (specs.fill == '0' && specs.alignment == align::numeric)
+    {
+        if (!std::is_arithmetic<T>::value || std::is_same<T, char>::value)
+        {
+            // Not a numeric type that should use zero padding - convert to space padding
+            specs.fill = ' ';
+            specs.alignment = align::right; // Use right alignment instead of numeric
+        }
+    }
+
+    // Special handling for zero padding with numeric alignment
+    if (specs.width > 0 && specs.alignment == align::numeric && specs.fill == '0')
+    {
+        // For numeric zero padding, we need to handle signs and prefixes specially
+        adaptive_buffer temp;
+        format_specs temp_specs = specs;
+        temp_specs.width = 0;               // Disable width for the measurement pass
+        temp_specs.alignment = align::none; // Disable alignment for measurement
+
+        format_value(value, temp, temp_specs);
+        int content_width = static_cast<int>(temp.size());
+
+        if (specs.width > content_width)
+        {
+            // We need to insert zeros between sign/prefix and digits
+            const char *temp_data = temp.data();
+            int sign_prefix_len = 0;
+
+            // Count sign characters
+            if (temp_data[0] == '-' || temp_data[0] == '+' || temp_data[0] == ' ')
+            {
+                out.push_back(temp_data[0]);
+                sign_prefix_len++;
+            }
+
+            // Count prefix characters (like 0x, 0b)
+            while (sign_prefix_len < content_width &&
+                   (temp_data[sign_prefix_len] == '0' && sign_prefix_len + 1 < content_width &&
+                    (temp_data[sign_prefix_len + 1] == 'x' || temp_data[sign_prefix_len + 1] == 'X' ||
+                     temp_data[sign_prefix_len + 1] == 'b' || temp_data[sign_prefix_len + 1] == 'B')))
+            {
+                out.push_back(temp_data[sign_prefix_len]);
+                out.push_back(temp_data[sign_prefix_len + 1]);
+                sign_prefix_len += 2;
+                break;
+            }
+
+            // Add zero padding
+            int zeros_needed = specs.width - content_width;
+            for (int i = 0; i < zeros_needed; ++i)
+            {
+                out.push_back('0');
+            }
+
+            // Add remaining digits
+            for (int i = sign_prefix_len; i < content_width; ++i)
+            {
+                out.push_back(temp_data[i]);
+            }
+        }
+        else
+        {
+            // No padding needed, just copy content
+            out.append(temp.data(), temp.data() + temp.size());
+        }
+        return;
     }
 
     // Apply padding if needed
