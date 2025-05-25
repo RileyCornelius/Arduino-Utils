@@ -1,6 +1,6 @@
 #include <Arduino.h>
 #include "Tests/_Tests.h"
-#include "log.h"
+// #include "log.h"
 
 void setup()
 {
@@ -8,8 +8,9 @@ void setup()
   delay(1000);
 
   loggerSetup();
-
-  LOG_I("Starting tests...");
+  Serial.print("C++ version: ");
+  Serial.println(__cplusplus);
+  // LOG_I("Starting tests...");
 }
 
 void loop()
