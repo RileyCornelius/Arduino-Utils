@@ -171,6 +171,19 @@ public:
 class external_buffer;
 class adaptive_buffer;
 
+// Add format_to_result struct definition
+struct format_to_result
+{
+    char *out;
+    bool truncated;
+
+    // AFMT_CONSTEXPR operator char*() const {
+    //     // Error reporting like fmtlib's report_error("output is truncated")
+    //     // is omitted for lightweightness. The truncated flag should be checked by the caller.
+    //     return out;
+    // }
+};
+
 // Type trait to check if a type is a valid buffer type
 template <typename T>
 struct is_valid_buffer : std::false_type
@@ -202,17 +215,23 @@ private:
     char *data_;
     size_t size_;
     size_t capacity_;
+    bool truncated_;
 
 public:
     AFMT_CONSTEXPR external_buffer(char *data, size_t capacity)
-        : data_(data), size_(0), capacity_(capacity) {}
+        : data_(data), size_(0), capacity_(capacity), truncated_(false) {}
 
     char *data() { return data_; }
     AFMT_CONSTEXPR const char *data() const { return data_; }
     AFMT_CONSTEXPR size_t size() const { return size_; }
     AFMT_CONSTEXPR size_t capacity() const { return capacity_; }
+    AFMT_CONSTEXPR bool is_truncated() const { return truncated_; }
 
-    void clear() { size_ = 0; }
+    void clear()
+    {
+        size_ = 0;
+        truncated_ = false;
+    }
 
     void push_back(const char &value)
     {
@@ -220,20 +239,32 @@ public:
         {
             data_[size_++] = value;
         }
-        // Silently ignore overflow in embedded context
+        else
+        {
+            truncated_ = true; // Mark truncation
+        }
     }
 
     void append(const char *begin, const char *end)
     {
-        size_t count = static_cast<size_t>(end - begin);
-        size_t available = capacity_ - size_;
-        size_t to_copy = count < available ? count : available;
+        size_t count_to_append = static_cast<size_t>(end - begin);
+        if (count_to_append == 0)
+            return;
 
-        for (size_t i = 0; i < to_copy; ++i)
+        size_t available_space = capacity_ - size_;
+        size_t num_to_copy = count_to_append;
+
+        if (count_to_append > available_space)
+        {
+            num_to_copy = available_space;
+            truncated_ = true;
+        }
+
+        for (size_t i = 0; i < num_to_copy; ++i)
         {
             data_[size_ + i] = begin[i];
         }
-        size_ += to_copy;
+        size_ += num_to_copy;
     }
 
     char &operator[](size_t pos) { return data_[pos]; }
@@ -1417,6 +1448,47 @@ AFMT_CONSTEXPR inline format_arg_store_n<sizeof...(Args)> make_format_args(const
 
 // =============== Public API Functions ===============
 
+// Core formatting function vformat_to (remains as is for generic buffers)
+// template <typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
+inline format_to_result vformat_to_n(char *out, size_t n, string_view fmt, format_args args)
+{
+    if (n == 0)
+    {
+        return {out, true}; // Truncated: no space for anything.
+    }
+
+    external_buffer temp_buffer(out, n);
+    vformat_to(temp_buffer, fmt, args); // Calls the existing generic vformat_to taking a buffer reference
+
+    bool was_truncated = temp_buffer.is_truncated();
+    char *end_ptr;
+
+    if (was_truncated)
+    {
+        // Content + null did not fit or content itself was too long.
+        // Ensure out[n - 1] is '\0'.
+        out[n - 1] = '\0';
+        end_ptr = out + n - 1; // Points to the enforced null terminator.
+    }
+    else
+    {
+        // Content + null fit. temp_buffer.size() includes the null.
+        // The null terminator is at out[temp_buffer.size() - 1].
+        if (temp_buffer.size() > 0)
+        {                                           // If something was written (at least the null terminator)
+            end_ptr = out + temp_buffer.size() - 1; // Points to the written null terminator.
+        }
+        else
+        { // Buffer capacity > 0, but nothing written (e.g. empty format string, resulting in only \0)
+            // vformat_to should have written a \0, making size 1.
+            // This case is defensive. If size is 0, ensure null at start.
+            out[0] = '\0';
+            end_ptr = out;
+        }
+    }
+    return {end_ptr, was_truncated};
+}
+
 // Format to any valid buffer type - constrained to valid buffer types
 template <typename buffer_type, typename... Args, AFMT_BUFFER_CONSTRAINT(buffer_type)>
 inline void format_to(buffer_type &buf, string_view fmt, const Args &...args)
@@ -1426,20 +1498,16 @@ inline void format_to(buffer_type &buf, string_view fmt, const Args &...args)
 
 // Format to a fixed-size array using external_buffer
 template <size_t N, typename... Args>
-inline void format_to(char (&out)[N], string_view fmt, const Args &...args)
+inline format_to_result format_to(char (&out)[N], string_view fmt, const Args &...args)
 {
-    external_buffer buf(out, N);
-    vformat_to(buf, fmt, make_format_args(args...));
+    return vformat_to_n(out, N, fmt, make_format_args(args...));
 }
 
 // Format to a buffer with size limitation using external buffer
 template <typename... Args>
-inline void format_to_n(char *out, size_t n, string_view fmt, const Args &...args)
+inline format_to_result format_to_n(char *out, size_t n, string_view fmt, const Args &...args)
 {
-    if (n == 0)
-        return;
-    external_buffer buf(out, n);
-    vformat_to(buf, fmt, make_format_args(args...));
+    return vformat_to_n(out, n, fmt, make_format_args(args...));
 }
 
 // Get the size that would be required for formatting
@@ -1468,7 +1536,7 @@ inline std::string format(string_view fmt, const Args &...args)
 // Format to an Arduino String
 inline String avformat(string_view fmt, format_args args)
 {
-    adaptive_buffer buf; // Use adaptive buffer for Arduino String creation
+    adaptive_buffer buf;
     vformat_to(buf, fmt, args);
     return String(buf.data(), buf.size());
 }
