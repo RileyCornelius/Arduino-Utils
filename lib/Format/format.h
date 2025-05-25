@@ -952,7 +952,8 @@ inline void to_string(double value, buffer_type &out, format_specs specs)
     }
 
     // Handle sign
-    if (value < 0)
+    bool negative = value < 0;
+    if (negative)
     {
         out.push_back('-');
         value = -value;
@@ -965,6 +966,14 @@ inline void to_string(double value, buffer_type &out, format_specs specs)
     {
         out.push_back(' ');
     }
+
+    // Apply rounding to the entire number based on precision
+    double scale = 1.0;
+    for (int i = 0; i < precision; ++i)
+    {
+        scale *= 10.0;
+    }
+    value = (value * scale + 0.5) / scale;
 
     // Extract integer part
     unsigned long long int_part = static_cast<unsigned long long>(value);
@@ -985,24 +994,13 @@ inline void to_string(double value, buffer_type &out, format_specs specs)
     {
         out.push_back('.');
 
-        // Multiply by 10^precision and round
+        // Convert fractional part to digits
         for (int i = 0; i < precision; ++i)
         {
             frac_part *= 10;
-        }
-        frac_part = static_cast<double>(static_cast<unsigned long long>(frac_part + 0.5));
-
-        // Print fractional digits
-        for (int i = 0; i < precision; ++i)
-        {
-            int digit = static_cast<int>(frac_part) % 10;
-            frac_part /= 10;
-            buffer[precision - i - 1] = '0' + digit;
-        }
-
-        for (int i = 0; i < precision; ++i)
-        {
-            out.push_back(buffer[i]);
+            int digit = static_cast<int>(frac_part);
+            out.push_back('0' + digit);
+            frac_part -= digit;
         }
     }
 }
