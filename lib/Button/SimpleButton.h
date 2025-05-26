@@ -5,15 +5,15 @@
 class SimpleButton
 {
 private:
-    bool lastState;
-    bool heldState;
+    int8_t lastState = -1; // -1 means not initialized
+    int8_t heldState = -1;
     bool activeState;
 
     uint8_t pin;
     uint32_t lastTime;
 
 public:
-    uint32_t debounceDelay = 20; // Milliseconds
+    uint32_t debounceDelayMs = 20; // Default 20 ms
 
     SimpleButton()
     {
@@ -50,7 +50,7 @@ public:
             lastTime = now;
             lastState = currentState;
         }
-        else if (now - lastTime > debounceDelay && currentState != heldState)
+        else if (now - lastTime > debounceDelayMs && currentState != heldState)
         {
             heldState = currentState; // Prevents entering this block again on the same press
             if (currentState == activeState)
