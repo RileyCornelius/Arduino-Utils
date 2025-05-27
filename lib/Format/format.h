@@ -57,10 +57,10 @@
 #endif
 
 // Default SBO size for the buffer
-#ifndef AFMT_DEFAULT_ADAPTIVE_SBO_SIZE
-#define AFMT_DEFAULT_ADAPTIVE_SBO_SIZE 64
+#ifndef AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE
+#define AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE 64
 #endif
-static_assert(AFMT_DEFAULT_ADAPTIVE_SBO_SIZE > 0, "AFMT_DEFAULT_SBO_SIZE must be greater than 0");
+static_assert(AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE > 0, "AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE must be greater than 0");
 
 // ================= Arduino FMT ==================
 
@@ -69,12 +69,11 @@ AFMT_BEGIN_NAMESPACE
 // =============== Type Definitions ===============
 
 // Format specifier types
-enum class presentation_type : unsigned char
+enum class presentation_type
 {
     // Common specifiers
     none = 0,
-    debug = 1,  // '?'
-    string = 2, // 's' (string, bool)
+    string = 2, // 's'
 
     // Integral, bool and character specifiers
     dec = 3, // 'd'
@@ -87,10 +86,8 @@ enum class presentation_type : unsigned char
     pointer = 3, // 'p'
 
     // Floating-point specifiers
-    exp = 1, // 'e' or 'E'
-    fixed,   // 'f' or 'F'
-    general, // 'g' or 'G'
-    hexfloat // 'a' or 'A'
+    exp = 1, // 'e' or 'E' //
+    fixed    // 'f' or 'F'
 };
 
 // Format specification options
@@ -172,61 +169,136 @@ public:
     }
 };
 
-// =============== Type Traits for Buffer Constraints ===============
+// =============== Unified Buffer Class ===============
 
-// Forward declarations for type checking
-class external_buffer;
-class adaptive_buffer;
-
-// Add format_to_result struct definition
-struct format_to_result
-{
-    char *out;
-    bool truncated;
-
-    // AFMT_CONSTEXPR operator char*() const {
-    //     // Error reporting like fmtlib's report_error("output is truncated")
-    //     // is omitted for lightweightness. The truncated flag should be checked by the caller.
-    //     return out;
-    // }
-};
-
-// Type trait to check if a type is a valid buffer type
-template <typename T>
-struct is_valid_buffer : std::false_type
-{
-};
-
-// Specialization for external_buffer
-template <>
-struct is_valid_buffer<external_buffer> : std::true_type
-{
-};
-
-// Specialization for adaptive_buffer
-template <>
-struct is_valid_buffer<adaptive_buffer> : std::true_type
-{
-};
-
-// Helper macro for buffer type constraints
-#define AFMT_BUFFER_CONSTRAINT(buffer_type) \
-    typename std::enable_if<is_valid_buffer<buffer_type>::value, int>::type = 0
-
-// =============== Buffer Classes ===============
-
-// External buffer - uses external pre-allocated char array
-class external_buffer
+// 1. Small Buffer Optimization (SBO): Uses internal static storage for small strings
+// 2. Heap allocation: Dynamically allocates memory for larger strings
+// 3. External buffer: Uses pre-allocated external memory with fixed capacity
+class buffer
 {
 private:
-    char *data_;
+    enum class buffer_mode
+    {
+        internal_static,
+        internal_heap,
+        external_static
+    };
+
+    char storage_[AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE];
+    char *data_; // Points to internal heap, internal or external buffer
     size_t size_;
     size_t capacity_;
+    buffer_mode mode_;
     bool truncated_;
 
 public:
-    AFMT_CONSTEXPR external_buffer(char *data, size_t capacity)
-        : data_(data), size_(0), capacity_(capacity), truncated_(false) {}
+    // Default constructor - adaptive mode with SBO
+    AFMT_CONSTEXPR buffer()
+        : data_(storage_), size_(0), capacity_(AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE),
+          mode_(buffer_mode::internal_static), truncated_(false) {}
+
+    // External buffer constructor
+    AFMT_CONSTEXPR buffer(char *ext_data, size_t ext_capacity)
+        : data_(ext_data), size_(0), capacity_(ext_capacity),
+          mode_(buffer_mode::external_static), truncated_(false) {}
+
+    // External buffer constructor for C-style arrays
+    template <size_t N_arr>
+    AFMT_CONSTEXPR buffer(char (&arr)[N_arr])
+        : data_(arr), size_(0), capacity_(N_arr),
+          mode_(buffer_mode::external_static), truncated_(false) {}
+
+    ~buffer()
+    {
+        if (mode_ == buffer_mode::internal_heap && data_ != nullptr)
+        {
+            delete[] data_;
+        }
+    }
+
+    // Disable copy
+    buffer(const buffer &) = delete;
+    buffer &operator=(const buffer &) = delete;
+
+    // Move constructor
+    buffer(buffer &&other) noexcept
+        : size_(other.size_), capacity_(other.capacity_),
+          mode_(other.mode_), truncated_(other.truncated_)
+    {
+        if (mode_ == buffer_mode::internal_static)
+        {
+            for (size_t i = 0; i < size_; ++i)
+            {
+                storage_[i] = other.storage_[i]; // Copy SBO content from other
+            }
+            data_ = storage_; // Point to own storage
+        }
+        else if (mode_ == buffer_mode::internal_heap)
+        {
+            data_ = other.data_;
+            other.data_ = nullptr; // Prevent other from deleting moved heap data
+        }
+        else // buffer_mode::external_static
+        {
+            data_ = other.data_;
+        }
+
+        // Reset other to a default SBO state
+        other.data_ = other.storage_;
+        other.size_ = 0;
+        other.capacity_ = AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE;
+        other.mode_ = buffer_mode::internal_static;
+        other.truncated_ = false;
+    }
+
+    // Move assignment
+    buffer &operator=(buffer &&other) noexcept
+    {
+        if (this != &other)
+        {
+            // Clean up current state
+            if (mode_ == buffer_mode::internal_heap && data_ != nullptr)
+            {
+                delete[] data_;
+            }
+
+            // Move from other
+            size_ = other.size_;
+            capacity_ = other.capacity_;
+            mode_ = other.mode_;
+            truncated_ = other.truncated_;
+
+            if (mode_ == buffer_mode::internal_static)
+            {
+                for (size_t i = 0; i < size_; ++i)
+                {
+                    storage_[i] = other.storage_[i];
+                }
+                data_ = storage_;
+            }
+            else if (mode_ == buffer_mode::internal_heap)
+            {
+                data_ = other.data_;
+                other.data_ = nullptr;
+            }
+            else // buffer_mode::external_static
+            {
+                data_ = other.data_;
+            }
+
+            // Reset other
+            other.data_ = other.storage_;
+            other.size_ = 0;
+            other.capacity_ = AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE;
+            other.mode_ = buffer_mode::internal_static;
+            other.truncated_ = false;
+        }
+        return *this;
+    }
+
+    AFMT_CONSTEXPR bool is_sbo() const { return mode_ == buffer_mode::internal_static; }
+    AFMT_CONSTEXPR bool is_external() const { return mode_ == buffer_mode::external_static; }
+    AFMT_CONSTEXPR bool is_heap() const { return mode_ == buffer_mode::internal_heap; }
 
     char *data() { return data_; }
     AFMT_CONSTEXPR const char *data() const { return data_; }
@@ -238,185 +310,73 @@ public:
     {
         size_ = 0;
         truncated_ = false;
+        // Note: Does not shrink capacity or change mode back to SBO from heap.
+        // To release heap and go back to SBO, a dedicated shrink_to_fit or reset method would be needed.
     }
-
-    void push_back(const char &value)
-    {
-        if (size_ < capacity_)
-        {
-            data_[size_++] = value;
-        }
-        else
-        {
-            truncated_ = true; // Mark truncation
-        }
-    }
-
-    void append(const char *begin, const char *end)
-    {
-        size_t count_to_append = static_cast<size_t>(end - begin);
-        if (count_to_append == 0)
-            return;
-
-        size_t available_space = capacity_ - size_;
-        size_t num_to_copy = count_to_append;
-
-        if (count_to_append > available_space)
-        {
-            num_to_copy = available_space;
-            truncated_ = true;
-        }
-
-        for (size_t i = 0; i < num_to_copy; ++i)
-        {
-            data_[size_ + i] = begin[i];
-        }
-        size_ += num_to_copy;
-    }
-
-    char &operator[](size_t pos) { return data_[pos]; }
-    const char &operator[](size_t pos) const { return data_[pos]; }
-};
-
-// Adaptive buffer - small buffer optimization with dynamic growth
-class adaptive_buffer
-{
-private:
-    char storage_[AFMT_DEFAULT_ADAPTIVE_SBO_SIZE];
-    char *heap_data_;
-    size_t size_;
-    size_t capacity_;
-
-    AFMT_CONSTEXPR bool is_sbo() const
-    {
-        return heap_data_ == nullptr;
-    }
-
-public:
-    AFMT_CONSTEXPR adaptive_buffer() : heap_data_(nullptr), size_(0), capacity_(AFMT_DEFAULT_ADAPTIVE_SBO_SIZE) {}
-
-    ~adaptive_buffer()
-    {
-        if (!is_sbo())
-        {
-            delete[] heap_data_;
-        }
-    }
-
-    // Disable copy
-    adaptive_buffer(const adaptive_buffer &) = delete;
-    adaptive_buffer &operator=(const adaptive_buffer &) = delete;
-
-    // Move constructor
-    adaptive_buffer(adaptive_buffer &&other) noexcept
-        : heap_data_(other.heap_data_), size_(other.size_), capacity_(other.capacity_)
-    {
-        if (other.is_sbo())
-        {
-            // Copy SBO data
-            for (size_t i = 0; i < size_; ++i)
-            {
-                storage_[i] = other.storage_[i];
-            }
-            heap_data_ = nullptr;
-        }
-
-        // Reset other to valid SBO state
-        other.heap_data_ = nullptr;
-        other.size_ = 0;
-        other.capacity_ = AFMT_DEFAULT_ADAPTIVE_SBO_SIZE;
-    }
-
-    // Move assignment
-    adaptive_buffer &operator=(adaptive_buffer &&other) noexcept
-    {
-        if (this != &other)
-        {
-            // Clean up current state
-            if (!is_sbo())
-            {
-                delete[] heap_data_;
-            }
-
-            // Move from other
-            heap_data_ = other.heap_data_;
-            size_ = other.size_;
-            capacity_ = other.capacity_;
-
-            if (other.is_sbo())
-            {
-                // Copy SBO data
-                for (size_t i = 0; i < size_; ++i)
-                {
-                    storage_[i] = other.storage_[i];
-                }
-                heap_data_ = nullptr;
-            }
-
-            // Reset other to valid SBO state
-            other.heap_data_ = nullptr;
-            other.size_ = 0;
-            other.capacity_ = AFMT_DEFAULT_ADAPTIVE_SBO_SIZE;
-        }
-        return *this;
-    }
-
-    char *data() { return is_sbo() ? storage_ : heap_data_; }
-    AFMT_CONSTEXPR const char *data() const { return is_sbo() ? storage_ : heap_data_; }
-    AFMT_CONSTEXPR size_t size() const { return size_; }
-    AFMT_CONSTEXPR size_t capacity() const { return capacity_; }
-
-    void clear() { size_ = 0; }
 
     void reserve(size_t new_capacity)
     {
-        if (new_capacity <= capacity_)
+        if (mode_ == buffer_mode::external_static || new_capacity <= capacity_)
+        {
             return;
+        }
 
-        if (is_sbo())
+        char *new_data_ptr = new char[new_capacity];
+        if (new_data_ptr == nullptr) // Allocation failed
         {
-            // Transition from SBO to heap
-            char *new_data = new char[new_capacity];
+            truncated_ = true; // Mark as truncated, cannot reserve
+            return;
+        }
+
+        if (size_ > 0 && data_ != nullptr) // Only copy if there's existing data
+        {
             for (size_t i = 0; i < size_; ++i)
             {
-                new_data[i] = storage_[i];
+                new_data_ptr[i] = data_[i];
             }
-            heap_data_ = new_data;
-            capacity_ = new_capacity;
         }
-        else
+
+        if (mode_ == buffer_mode::internal_heap && data_ != nullptr)
         {
-            // Grow on heap
-            char *new_data = new char[new_capacity];
-            for (size_t i = 0; i < size_; ++i)
-            {
-                new_data[i] = heap_data_[i];
-            }
-            delete[] heap_data_;
-            heap_data_ = new_data;
-            capacity_ = new_capacity;
+            delete[] data_;
         }
+        // If mode_ was sbo, data_ pointed to storage_, no delete needed for old data_.
+
+        data_ = new_data_ptr;
+        mode_ = buffer_mode::internal_heap;
+        capacity_ = new_capacity;
     }
 
     void push_back(const char &value)
     {
-        if (size_ == capacity_)
+        if (size_ >= capacity_)
         {
-            // Need to grow
-            size_t new_cap = capacity_ * 2;
-            if (new_cap <= capacity_) // Handle overflow
-                new_cap = capacity_ + 1;
-            reserve(new_cap);
-        }
+            if (mode_ == buffer_mode::external_static)
+            {
+                truncated_ = true;
+                return;
+            }
+            // Grow: If capacity is 0 (should not happen with SBO > 0), start with default SBO size. Otherwise, double.
+            size_t new_cap = capacity_ == 0 ? AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE : capacity_ * 2;
+            if (new_cap == 0 && AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE > 0)
+                new_cap = AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE; // Ensure growth if SBO is defined
+            else if (new_cap <= capacity_)
+                new_cap = capacity_ + 1; // Handle overflow or non-growth case
 
-        if (is_sbo())
-        {
-            storage_[size_++] = value;
+            if (new_cap == 0)
+            { // Still 0, cannot grow (e.g. AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE is 0 and initial capacity was 0)
+                truncated_ = true;
+                return;
+            }
+            reserve(new_cap);
+
+            if (size_ >= capacity_) // Still no space (e.g., reserve failed or SBO_SIZE_PARAM was 0 and initial reserve was too small)
+            {
+                truncated_ = true;
+                return;
+            }
         }
-        else
-        {
-            heap_data_[size_++] = value;
-        }
+        data_[size_++] = value;
     }
 
     void append(const char *begin, const char *end)
@@ -427,40 +387,83 @@ public:
 
         if (size_ + count > capacity_)
         {
-            size_t new_cap = capacity_;
-            while (new_cap < size_ + count)
+            if (mode_ == buffer_mode::external_static)
             {
-                new_cap = new_cap * 2;
-                if (new_cap <= capacity_) // Handle overflow
+                size_t available_space = capacity_ - size_;
+                size_t num_to_copy = count > available_space ? available_space : count;
+
+                if (data_ != nullptr)
+                { // Ensure data_ is not null before writing
+                    for (size_t i = 0; i < num_to_copy; ++i)
+                    {
+                        data_[size_ + i] = begin[i];
+                    }
+                }
+                size_ += num_to_copy;
+
+                if (count > available_space)
                 {
-                    new_cap = size_ + count;
+                    truncated_ = true;
+                }
+                return;
+            }
+
+            size_t required_cap = size_ + count;
+            size_t new_cap = capacity_ == 0 ? AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE : capacity_;
+            if (new_cap == 0 && AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE > 0)
+                new_cap = AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE;
+            else if (new_cap == 0)
+                new_cap = 16; // Fallback if SBO is 0 and capacity is 0
+
+            while (new_cap < required_cap)
+            {
+                new_cap *= 2;
+                if (new_cap <= capacity_)
+                {
+                    new_cap = required_cap; // Grow to at least required
                     break;
                 }
             }
             reserve(new_cap);
+
+            if (size_ + count > capacity_) // Still not enough space
+            {
+                // Append what fits and truncate
+                size_t available_space = capacity_ - size_;
+                size_t num_to_copy = count > available_space ? available_space : count;
+                if (data_ != nullptr)
+                {
+                    for (size_t i = 0; i < num_to_copy; ++i)
+                    {
+                        data_[size_ + i] = begin[i];
+                    }
+                }
+                size_ += num_to_copy;
+                truncated_ = true;
+                return;
+            }
         }
 
-        char *target = is_sbo() ? storage_ : heap_data_;
-        for (size_t i = 0; i < count; ++i)
-        {
-            target[size_ + i] = begin[i];
+        if (data_ != nullptr)
+        { // Ensure data_ is not null
+            for (size_t i = 0; i < count; ++i)
+            {
+                data_[size_ + i] = begin[i];
+            }
         }
         size_ += count;
     }
 
     char &operator[](size_t pos)
     {
-        return is_sbo() ? storage_[pos] : heap_data_[pos];
+        return data_[pos];
     }
 
     const char &operator[](size_t pos) const
     {
-        return is_sbo() ? storage_[pos] : heap_data_[pos];
+        return data_[pos];
     }
 };
-
-// Default buffer type alias for convenience - now just an alias
-using buffer = adaptive_buffer;
 
 // =============== Format Specifications ===============
 
@@ -590,11 +593,9 @@ inline const char *parse_format_specs(
     // Parse fill character and alignment
     if (begin + 1 != end && (*(begin + 1) == '<' || *(begin + 1) == '>' || *(begin + 1) == '^'))
     {
-        // If the character after the current one is an alignment character,
-        // then the current character is a fill character
         specs.fill = c;
-        ++begin;    // Move past the fill character
-        c = *begin; // Update c to the alignment character
+        ++begin;
+        c = *begin;
     }
 
     // Parse alignment
@@ -610,10 +611,8 @@ inline const char *parse_format_specs(
     // Parse sign
     if (c == '+' || c == '-' || c == ' ')
     {
-        if (c == '+')
-            specs.set_sign(sign::plus);
-        else if (c == ' ')
-            specs.set_sign(sign::space);
+        specs.set_sign(c == '+' ? sign::plus : c == '-' ? sign::minus
+                                                        : sign::space);
         ++begin;
         if (begin == end)
             return begin;
@@ -633,9 +632,8 @@ inline const char *parse_format_specs(
     // Parse zero padding and width
     if (c == '0')
     {
-        // Zero padding detected - set fill to '0' and alignment to numeric
+        specs.alignment = align::numeric;
         specs.fill = '0';
-        specs.set_align(align::numeric);
         ++begin;
         if (begin == end)
             return begin;
@@ -657,15 +655,7 @@ inline const char *parse_format_specs(
         ++begin;
         if (begin == end)
             return begin;
-        c = *begin;
-        if (c >= '0' && c <= '9')
-        {
-            specs.precision = parse_nonnegative_int(begin, end);
-        }
-        else
-        {
-            specs.precision = 0;
-        }
+        specs.precision = parse_nonnegative_int(begin, end);
         if (begin == end)
             return begin;
         c = *begin;
@@ -677,86 +667,56 @@ inline const char *parse_format_specs(
         switch (c)
         {
         case 'd':
-            specs.type = presentation_type::dec;
-            specs.upper = false;
-            ++begin;
+            specs.set_type(presentation_type::dec);
             break;
         case 'x':
-            specs.type = presentation_type::hex;
-            specs.upper = false;
-            ++begin;
+            specs.set_type(presentation_type::hex);
             break;
         case 'X':
-            specs.type = presentation_type::hex;
-            specs.upper = true;
-            ++begin;
+            specs.set_type(presentation_type::hex);
+            specs.set_upper();
             break;
         case 'o':
-            specs.type = presentation_type::oct;
-            specs.upper = false;
-            ++begin;
+            specs.set_type(presentation_type::oct);
             break;
         case 'b':
-            specs.type = presentation_type::bin;
-            specs.upper = false;
-            ++begin;
+            specs.set_type(presentation_type::bin);
             break;
         case 'B':
-            specs.type = presentation_type::bin;
-            specs.upper = true;
-            ++begin;
+            specs.set_type(presentation_type::bin);
+            specs.set_upper();
             break;
         case 'e':
-            specs.type = presentation_type::exp;
-            specs.upper = false;
-            ++begin;
+            specs.set_type(presentation_type::exp);
             break;
         case 'E':
-            specs.type = presentation_type::exp;
-            specs.upper = true;
-            ++begin;
+            specs.set_type(presentation_type::exp);
+            specs.set_upper();
             break;
         case 'f':
-            specs.type = presentation_type::fixed;
-            specs.upper = false;
-            ++begin;
+            specs.set_type(presentation_type::fixed);
             break;
         case 'F':
-            specs.type = presentation_type::fixed;
-            specs.upper = true;
-            ++begin;
-            break;
-        case 'g':
-            specs.type = presentation_type::general;
-            specs.upper = false;
-            ++begin;
-            break;
-        case 'G':
-            specs.type = presentation_type::general;
-            specs.upper = true;
-            ++begin;
+            specs.set_type(presentation_type::fixed);
+            specs.set_upper();
             break;
         case 'c':
-            specs.type = presentation_type::chr;
-            specs.upper = false;
-            ++begin;
+            specs.set_type(presentation_type::chr);
             break;
         case 's':
-            specs.type = presentation_type::string;
-            specs.upper = false;
-            ++begin;
+            specs.set_type(presentation_type::string);
             break;
         case 'p':
-            specs.type = presentation_type::pointer;
-            specs.upper = false;
-            ++begin;
+            specs.set_type(presentation_type::pointer);
             break;
-        case '?':
-            specs.type = presentation_type::debug;
-            specs.upper = false;
-            ++begin;
+        // case '?': // Removed debug specifier parsing
+        //     specs.set_type(presentation_type::debug);
+        //     break;
+        default:
+            // Unknown presentation type
             break;
         }
+        ++begin;
     }
 
     return begin;
@@ -910,9 +870,9 @@ AFMT_CONSTEXPR inline format_arg_value format_args::get(int id) const
 
 // =============== Conversion Functions ===============
 
-// Convert integer to string - constrained to valid buffer types
-template <typename T, typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-void to_string(T value, buffer_type &out, format_specs specs)
+// Convert integer to string
+template <typename T>
+void to_string(T value, buffer &out, format_specs specs)
 {
     // Handle special case of 0
     if (value == 0)
@@ -996,13 +956,12 @@ void to_string(T value, buffer_type &out, format_specs specs)
     }
 }
 
-// Convert float to string - constrained to valid buffer types
-template <typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-inline void to_string(double value, buffer_type &out, format_specs specs)
+// Convert float to string
+inline void to_string(double value, buffer &out, format_specs specs)
 {
     // Handle special cases
     if (value != value)
-    { // NaN
+    {
         out.push_back('n');
         out.push_back('a');
         out.push_back('n');
@@ -1012,10 +971,10 @@ inline void to_string(double value, buffer_type &out, format_specs specs)
     if (value == 0.0)
     {
         out.push_back('0');
-        int precision = specs.precision >= 0 ? specs.precision : 6;
+        int precision = specs.precision >= 0 ? specs.precision : 2; // Default precision for 0.0
         if (precision > 0 && (specs.type == presentation_type::fixed ||
                               specs.type == presentation_type::exp ||
-                              specs.type == presentation_type::general))
+                              specs.type == presentation_type::none)) // Added none for default float
         {
             out.push_back('.');
             for (int i = 0; i < precision; ++i)
@@ -1085,56 +1044,12 @@ inline void to_string(double value, buffer_type &out, format_specs specs)
         out.push_back(' ');
     }
 
-    int precision = specs.precision >= 0 ? specs.precision : 6;
+    int precision = specs.precision >= 0 ? specs.precision : 2;
 
-    // Determine format type
-    presentation_type format_type = specs.type;
-    if (format_type == presentation_type::none)
+    // Format based on type (removed general notation handling)
+    if (specs.type == presentation_type::exp)
     {
-        format_type = presentation_type::general; // Default to general format
-    }
-
-    // Handle general format - choose between fixed and scientific
-    if (format_type == presentation_type::general)
-    {
-        // Calculate exponent to decide format
-        int exponent = 0;
-        double temp_value = value;
-        if (temp_value >= 1.0)
-        {
-            while (temp_value >= 10.0)
-            {
-                temp_value /= 10.0;
-                exponent++;
-            }
-        }
-        else if (temp_value > 0.0)
-        {
-            while (temp_value < 1.0)
-            {
-                temp_value *= 10.0;
-                exponent--;
-            }
-        }
-
-        // Use scientific notation if exponent is outside [-4, precision)
-        if (exponent < -4 || exponent >= precision)
-        {
-            format_type = presentation_type::exp;
-        }
-        else
-        {
-            format_type = presentation_type::fixed;
-            // Adjust precision for general format
-            precision = precision - exponent - 1;
-            if (precision < 0)
-                precision = 0;
-        }
-    }
-
-    if (format_type == presentation_type::exp)
-    {
-        // Scientific notation
+        // Scientific notation implementation
         int exponent = 0;
 
         // Normalize the number to [1.0, 10.0)
@@ -1213,7 +1128,7 @@ inline void to_string(double value, buffer_type &out, format_specs specs)
     }
     else
     {
-        // Fixed-point notation (default case from original implementation)
+        // Fixed point notation (default)
         // Apply rounding to the entire number based on precision
         double scale = 1.0;
         for (int i = 0; i < precision; ++i)
@@ -1233,7 +1148,9 @@ inline void to_string(double value, buffer_type &out, format_specs specs)
         }
         else
         {
-            to_string(int_part, out, format_specs());
+            // Create temporary default specs for integer part
+            format_specs int_specs;
+            to_string(int_part, out, int_specs);
         }
 
         // Add decimal point and fractional part
@@ -1255,9 +1172,7 @@ inline void to_string(double value, buffer_type &out, format_specs specs)
 
 // =============== Formatting Functions ===============
 
-// Helper for padding - constrained to valid buffer types
-template <typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-inline void pad(buffer_type &out, int width, char fill, align alignment, int content_width)
+inline void pad_before(buffer &out, int width, char fill, align alignment, int content_width)
 {
     if (width <= content_width)
         return;
@@ -1282,12 +1197,10 @@ inline void pad(buffer_type &out, int width, char fill, align alignment, int con
         // Right padding will be added after the content
         padding -= left_padding;
     }
-
     // For align::left, no padding is needed here
 }
 
-template <typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-inline void pad_after(buffer_type &out, int width, char fill, align alignment, int content_width)
+inline void pad_after(buffer &out, int width, char fill, align alignment, int content_width)
 {
     if (width <= content_width)
         return;
@@ -1309,13 +1222,16 @@ inline void pad_after(buffer_type &out, int width, char fill, align alignment, i
             out.push_back(fill);
         }
     }
-
     // For align::right, no padding is needed here
 }
 
-// Format a single argument with proper padding - constrained to valid buffer types
-template <typename T, typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-void format_value(const T &value, buffer_type &out, format_specs specs)
+// Forward declaration for format_value_dispatch
+template <typename T, int DispatchSelector>
+void format_value_dispatch_impl(const T &value, buffer &out, format_specs specs, std::integral_constant<int, DispatchSelector>);
+
+// Format a single argument with proper padding
+template <typename T>
+void format_value(const T &value, buffer &out, format_specs specs)
 {
     // Set default alignment based on type if not explicitly specified
     if (specs.alignment == align::none)
@@ -1332,6 +1248,7 @@ void format_value(const T &value, buffer_type &out, format_specs specs)
     }
 
     // Zero padding should only apply to numeric types (not strings, chars, etc.)
+
     // For non-numeric types, convert zero padding to space padding
     if (specs.fill == '0' && specs.alignment == align::numeric)
     {
@@ -1347,7 +1264,7 @@ void format_value(const T &value, buffer_type &out, format_specs specs)
     if (specs.width > 0 && specs.alignment == align::numeric && specs.fill == '0')
     {
         // For numeric zero padding, we need to handle signs and prefixes specially
-        adaptive_buffer temp;
+        buffer temp;
         format_specs temp_specs = specs;
         temp_specs.width = 0;               // Disable width for the measurement pass
         temp_specs.alignment = align::none; // Disable alignment for measurement
@@ -1373,6 +1290,7 @@ void format_value(const T &value, buffer_type &out, format_specs specs)
                    (temp_data[sign_prefix_len] == '0' && sign_prefix_len + 1 < content_width &&
                     (temp_data[sign_prefix_len + 1] == 'x' || temp_data[sign_prefix_len + 1] == 'X' ||
                      temp_data[sign_prefix_len + 1] == 'b' || temp_data[sign_prefix_len + 1] == 'B')))
+
             {
                 out.push_back(temp_data[sign_prefix_len]);
                 out.push_back(temp_data[sign_prefix_len + 1]);
@@ -1405,7 +1323,7 @@ void format_value(const T &value, buffer_type &out, format_specs specs)
     if (specs.width > 0)
     {
         // We need to format into a temporary buffer to know the content width
-        adaptive_buffer temp;
+        buffer temp;
         format_specs temp_specs = specs;
         temp_specs.width = 0; // Disable width for the measurement pass to prevent recursion
 
@@ -1413,7 +1331,7 @@ void format_value(const T &value, buffer_type &out, format_specs specs)
         int content_width = static_cast<int>(temp.size());
 
         // Apply padding
-        pad(out, specs.width, specs.fill, specs.alignment, content_width);
+        pad_before(out, specs.width, specs.fill, specs.alignment, content_width);
 
         // Copy the formatted content
         out.append(temp.data(), temp.data() + temp.size());
@@ -1426,44 +1344,42 @@ void format_value(const T &value, buffer_type &out, format_specs specs)
 
     // Format based on type - replace if constexpr with type dispatch
     // Split the template specialization using tag dispatch
-    format_value_dispatch(value, out, specs, typename std::conditional < std::is_integral<T>::value && !std::is_same<T, bool>::value && !std::is_same<T, char>::value,
-                          std::integral_constant<int, 1>,
-                          typename std::conditional<
-                              std::is_same<T, bool>::value,
-                              std::integral_constant<int, 2>,
-                              typename std::conditional<
-                                  std::is_same<T, char>::value,
-                                  std::integral_constant<int, 3>,
-                                  typename std::conditional<
-                                      std::is_same<T, float>::value,
-                                      std::integral_constant<int, 4>,
-                                      typename std::conditional<
-                                          std::is_same<T, double>::value,
-                                          std::integral_constant<int, 5>,
-                                          typename std::conditional<
-                                              std::is_same<T, const char *>::value,
-                                              std::integral_constant<int, 6>,
-                                              typename std::conditional<
-                                                  std::is_same<T, string_view>::value,
-                                                  std::integral_constant<int, 7>,
-                                                  typename std::conditional<
-                                                      std::is_same<T, const void *>::value,
-                                                      std::integral_constant<int, 8>,
-                                                      std::integral_constant<int, 0>>::type>::type>::type>::type>::type>::type>::type > ::type());
+    format_value_dispatch_impl(value, out, specs, typename std::conditional < std::is_integral<T>::value && !std::is_same<T, bool>::value && !std::is_same<T, char>::value,
+                               std::integral_constant<int, 1>,
+                               typename std::conditional<
+                                   std::is_same<T, bool>::value,
+                                   std::integral_constant<int, 2>,
+                                   typename std::conditional<
+                                       std::is_same<T, char>::value,
+                                       std::integral_constant<int, 3>,
+                                       typename std::conditional<
+                                           std::is_same<T, float>::value,
+                                           std::integral_constant<int, 4>,
+                                           typename std::conditional<
+                                               std::is_same<T, double>::value,
+                                               std::integral_constant<int, 5>,
+                                               typename std::conditional<
+                                                   std::is_same<T, const char *>::value,
+                                                   std::integral_constant<int, 6>,
+                                                   typename std::conditional<
+                                                       std::is_same<T, string_view>::value,
+                                                       std::integral_constant<int, 7>,
+                                                       typename std::conditional<
+                                                           std::is_same<T, const void *>::value,
+                                                           std::integral_constant<int, 8>,
+                                                           std::integral_constant<int, 0>>::type>::type>::type>::type>::type>::type>::type > ::type());
 }
 
-// Type dispatch helpers for format_value - constrained to valid buffer types
-template <typename T, typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-void format_value_dispatch(const T &value, buffer_type &out, format_specs specs, std::integral_constant<int, 1>)
+// Type dispatch helpers for format_value
+template <typename T>
+void format_value_dispatch_impl(const T &value, buffer &out, format_specs specs, std::integral_constant<int, 1>) // Integral
 {
-    // Integral type
     to_string(value, out, specs);
 }
 
-template <typename T, typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-void format_value_dispatch(const T &value, buffer_type &out, format_specs specs, std::integral_constant<int, 2>)
+template <typename T>
+void format_value_dispatch_impl(const T &value, buffer &out, format_specs specs, std::integral_constant<int, 2>) // Bool
 {
-    // Bool type
     if (specs.type == presentation_type::none || specs.type == presentation_type::string)
     {
         const char *str = value ? "true" : "false";
@@ -1476,31 +1392,27 @@ void format_value_dispatch(const T &value, buffer_type &out, format_specs specs,
     }
 }
 
-template <typename T, typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-void format_value_dispatch(const T &value, buffer_type &out, format_specs specs, std::integral_constant<int, 3>)
+template <typename T>
+void format_value_dispatch_impl(const T &value, buffer &out, format_specs specs, std::integral_constant<int, 3>) // Char
 {
-    // Char type
     out.push_back(value);
 }
 
-template <typename T, typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-void format_value_dispatch(const T &value, buffer_type &out, format_specs specs, std::integral_constant<int, 4>)
+template <typename T>
+void format_value_dispatch_impl(const T &value, buffer &out, format_specs specs, std::integral_constant<int, 4>) // Float
 {
-    // Float type
     to_string(static_cast<double>(value), out, specs);
 }
 
-template <typename T, typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-void format_value_dispatch(const T &value, buffer_type &out, format_specs specs, std::integral_constant<int, 5>)
+template <typename T>
+void format_value_dispatch_impl(const T &value, buffer &out, format_specs specs, std::integral_constant<int, 5>) // Double
 {
-    // Double type
     to_string(value, out, specs);
 }
 
-template <typename T, typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-void format_value_dispatch(const T &value, buffer_type &out, format_specs specs, std::integral_constant<int, 6>)
+template <typename T>
+void format_value_dispatch_impl(const T &value, buffer &out, format_specs specs, std::integral_constant<int, 6>) // C-string
 {
-    // const char* type
     if (value)
     {
         const char *str = value;
@@ -1520,10 +1432,9 @@ void format_value_dispatch(const T &value, buffer_type &out, format_specs specs,
     }
 }
 
-template <typename T, typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-void format_value_dispatch(const T &value, buffer_type &out, format_specs specs, std::integral_constant<int, 7>)
+template <typename T>
+void format_value_dispatch_impl(const T &value, buffer &out, format_specs specs, std::integral_constant<int, 7>) // string_view
 {
-    // string_view type
     if (value.data())
     {
         for (size_t i = 0; i < value.size(); ++i)
@@ -1533,15 +1444,14 @@ void format_value_dispatch(const T &value, buffer_type &out, format_specs specs,
     }
 }
 
-template <typename T, typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-void format_value_dispatch(const T &value, buffer_type &out, format_specs specs, std::integral_constant<int, 8>)
+template <typename T>
+void format_value_dispatch_impl(const T &value, buffer &out, format_specs specs, std::integral_constant<int, 8>) // Pointer
 {
-    // const void* type
     if (value)
     {
         out.push_back('0');
         out.push_back('x');
-        uintptr_t ptr_val = reinterpret_cast<uintptr_t>(value);
+        uint32_t ptr_val = reinterpret_cast<uint32_t>(value);
 
         // Create temporary specs for hex format
         format_specs ptr_specs;
@@ -1560,21 +1470,19 @@ void format_value_dispatch(const T &value, buffer_type &out, format_specs specs,
     }
 }
 
-template <typename T, typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-void format_value_dispatch(const T &value, buffer_type &out, format_specs specs, std::integral_constant<int, 0>)
+template <typename T>
+void format_value_dispatch_impl(const T &value, buffer &out, format_specs specs, std::integral_constant<int, 0>) // Fallback
 {
-    // Fallback for unsupported types
     out.push_back('?');
 }
 
-// Visitor for format_arg_value - constrained to valid buffer types
-template <typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-struct format_visitor
+// Visitor for format_arg_value
+struct format_visitor_impl
 {
-    buffer_type &out;
+    buffer &out;
     format_specs specs;
 
-    AFMT_CONSTEXPR format_visitor(buffer_type &out_, const format_specs &specs_)
+    AFMT_CONSTEXPR format_visitor_impl(buffer &out_, const format_specs &specs_)
         : out(out_), specs(specs_) {}
 
     template <typename T>
@@ -1591,11 +1499,10 @@ struct format_visitor
 
 // =============== Format String Parsing ===============
 
-// Parse a replacement field starting with '{' - constrained to valid buffer types
-template <typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
+// Parse a replacement field starting with '{'
 inline const char *parse_replacement_field(const char *begin, const char *end,
                                            parse_context &ctx, format_args args,
-                                           buffer_type &out)
+                                           buffer &out)
 {
     if (begin == end)
         return begin;
@@ -1609,7 +1516,7 @@ inline const char *parse_replacement_field(const char *begin, const char *end,
         // Empty replacement field '{}'
         auto arg = args.get(ctx.next_arg_id());
         format_specs specs;
-        arg.visit(format_visitor<buffer_type>(out, specs));
+        arg.visit(format_visitor_impl(out, specs));
         return begin + 1;
     }
 
@@ -1651,50 +1558,9 @@ inline const char *parse_replacement_field(const char *begin, const char *end,
 
     // Format the argument
     auto arg = args.get(arg_id);
-    arg.visit(format_visitor<buffer_type>(out, specs));
+    arg.visit(format_visitor_impl(out, specs));
 
     return begin + 1;
-}
-
-// Parse a format string and write output to the buffer - constrained to valid buffer types
-template <typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-inline void vformat_to(buffer_type &out, string_view fmt, format_args args)
-{
-    parse_context ctx(fmt);
-    auto begin = fmt.data();
-    auto end = begin + fmt.size();
-
-    while (begin != end)
-    {
-        auto c = *begin++;
-
-        if (c == '{')
-        {
-            --begin; // Put back the '{'
-            begin = parse_replacement_field(begin, end, ctx, args, out);
-        }
-        else if (c == '}')
-        {
-            if (begin != end && *begin == '}')
-            {
-                // Escaped '}}' - just output a single '}'
-                out.push_back('}');
-                ++begin;
-            }
-            else
-            {
-                // Error: unmatched '}'
-                out.push_back('}'); // Output as-is for now
-            }
-        }
-        else
-        {
-            out.push_back(c);
-        }
-    }
-
-    // Automatically null-terminate for C-style string compatibility
-    out.push_back('\0');
 }
 
 // =============== Argument Storage Helper ===============
@@ -1733,64 +1599,113 @@ AFMT_CONSTEXPR inline format_arg_store_n<sizeof...(Args)> make_format_args(const
     return format_arg_store_n<sizeof...(Args)>(args...);
 }
 
-// =============== Public API Functions ===============
+struct format_to_result
+{
+    char *out;
+    bool truncated;
 
-// Core formatting function vformat_to (remains as is for generic buffers)
-// template <typename buffer_type, AFMT_BUFFER_CONSTRAINT(buffer_type)>
+    AFMT_CONSTEXPR operator char *() const
+    {
+        return out;
+    }
+};
+
+// ================ Core format Functions ================
+
+// Parse a format string and write output to the buffer
+inline void vformat_to(buffer &out, string_view fmt, format_args args)
+{
+    parse_context ctx(fmt);
+    auto begin = fmt.data();
+    auto end = begin + fmt.size();
+
+    while (begin != end)
+    {
+        auto c = *begin++;
+
+        if (c == '{')
+        {
+            --begin; // Put back the '{'
+            begin = parse_replacement_field(begin, end, ctx, args, out);
+        }
+        else if (c == '}')
+        {
+            if (begin != end && *begin == '}')
+            {
+                // Escaped '}}' - just output a single '}'
+                out.push_back('}');
+                ++begin;
+            }
+            else
+            {
+                // Error: unmatched '}'
+                out.push_back('}'); // Output as-is for now
+            }
+        }
+        else
+        {
+            out.push_back(c);
+        }
+    }
+}
+
+// Core formatting function vformat_to_n
 inline format_to_result vformat_to_n(char *out, size_t n, string_view fmt, format_args args)
 {
     if (n == 0)
     {
-        return {out, true}; // Truncated: no space for anything.
+        return format_to_result{out, true}; // No space for anything, not even null.
     }
 
-    external_buffer temp_buffer(out, n);
-    vformat_to(temp_buffer, fmt, args); // Calls the existing generic vformat_to taking a buffer reference
+    buffer temp_buffer(out, n);         // Operates in external mode.
+    vformat_to(temp_buffer, fmt, args); // Writes formatted string into `out` via `temp_buffer`. Does NOT null terminate.
 
-    bool was_truncated = temp_buffer.is_truncated();
-    char *end_ptr;
+    size_t content_len = temp_buffer.size();
+    bool format_overflowed = temp_buffer.is_truncated(); // True if vformat_to tried to write > n chars.
 
-    if (was_truncated)
+    if (format_overflowed)
     {
-        // Content + null did not fit or content itself was too long.
-        // Ensure out[n - 1] is '\0'.
+        // Content was longer than n. temp_buffer (and thus `out`) contains the first n chars.
+        // Overwrite last char of `out` to place the null terminator. Result is truncated.
         out[n - 1] = '\0';
-        end_ptr = out + n - 1; // Points to the enforced null terminator.
+        return format_to_result{out, true};
     }
     else
     {
-        // Content + null fit. temp_buffer.size() includes the null.
-        // The null terminator is at out[temp_buffer.size() - 1].
-        if (temp_buffer.size() > 0)
-        {                                           // If something was written (at least the null terminator)
-            end_ptr = out + temp_buffer.size() - 1; // Points to the written null terminator.
+        // All content fit, or exactly filled the buffer. content_len <= n.
+        if (content_len < n)
+        {
+            // Content fit and there's space in `out` for null.
+            out[content_len] = '\0';
+            return format_to_result{out, false}; // Not truncated
         }
         else
-        { // Buffer capacity > 0, but nothing written (e.g. empty format string, resulting in only \0)
-            // vformat_to should have written a \0, making size 1.
-            // This case is defensive. If size is 0, ensure null at start.
-            out[0] = '\0';
-            end_ptr = out;
+        {
+            // Content exactly filled n bytes (content_len == n).
+            // No space for a separate null, must overwrite last char of `out`. Result is truncated.
+            out[n - 1] = '\0';
+            return format_to_result{out, true};
         }
     }
-    return {end_ptr, was_truncated};
 }
 
-// Format to any valid buffer type - constrained to valid buffer types
-template <typename buffer_type, typename... Args, AFMT_BUFFER_CONSTRAINT(buffer_type)>
-inline void format_to(buffer_type &buf, string_view fmt, const Args &...args)
+// =============== Public API Functions ===============
+
+// Format to buffer
+template <typename... Args>
+inline void format_to(buffer &out, string_view fmt, const Args &...args)
 {
-    vformat_to(buf, fmt, make_format_args(args...));
+    vformat_to(out, fmt, make_format_args(args...));
 }
 
-// Format to a fixed-size array using external_buffer
+// Format to a fixed-size array using external char[]
 template <size_t N, typename... Args>
 inline format_to_result format_to(char (&out)[N], string_view fmt, const Args &...args)
 {
     return vformat_to_n(out, N, fmt, make_format_args(args...));
 }
 
-// Format to a buffer with size limitation using external buffer
+// Format to a buffer with size limitation using external buffer mode
 template <typename... Args>
 inline format_to_result format_to_n(char *out, size_t n, string_view fmt, const Args &...args)
 {
@@ -1801,29 +1716,30 @@ inline format_to_result format_to_n(char *out, size_t n, string_view fmt, const 
 template <typename... Args>
 inline size_t formatted_size(string_view fmt, const Args &...args)
 {
-    adaptive_buffer buf;
+    buffer buf;
     vformat_to(buf, fmt, make_format_args(args...));
-    return buf.size();
+    return buf.size(); // excluding null terminator
 }
 
 inline std::string vformat(string_view fmt, format_args args)
 {
-    adaptive_buffer buf;
+    buffer buf;
     vformat_to(buf, fmt, args);
     return std::string(buf.data(), buf.size());
 }
 
+// Format to std::string
 template <typename... Args>
 inline std::string format(string_view fmt, const Args &...args)
 {
     return vformat(fmt, make_format_args(args...));
 }
 
+// Format for Arduino String
 #if AFMT_HAS_ARDUINO
-// Format to an Arduino String
 inline String avformat(string_view fmt, format_args args)
 {
-    adaptive_buffer buf;
+    buffer buf;
     vformat_to(buf, fmt, args);
     return String(buf.data(), buf.size());
 }

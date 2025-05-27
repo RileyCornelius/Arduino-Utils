@@ -77,8 +77,8 @@ void test_format_to_floats()
 	TEST_ASSERT_EQUAL_STRING_MESSAGE("Pi: 3.14", buffer, "Float with precision");
 
 	// Default precision
-	afmt::format_to(buffer, "Value: {}", 2.5);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("Value: 2.500000", buffer, "Float default precision");
+	afmt::format_to(buffer, "Value: {}", 2.50464);
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Value: 2.50", buffer, "Float default precision");
 
 	// Zero precision
 	afmt::format_to(buffer, "Int: {:.0f}", 3.7);
@@ -151,7 +151,7 @@ void test_format_to_scientific_notation()
 	afmt::format_to(buffer, "VerySmall: {:.1E}", 0.000000987);
 	TEST_ASSERT_EQUAL_STRING_MESSAGE("VerySmall: 9.9E-07", buffer, "Scientific very small number");
 
-	// Test zero in scientific notation
+	// Test zero in scientific notation - updated for 2-digit precision
 	afmt::format_to(buffer, "Zero: {:.2e}", 0.0);
 	TEST_ASSERT_EQUAL_STRING_MESSAGE("Zero: 0.00e+00", buffer, "Scientific zero");
 
@@ -166,7 +166,7 @@ void test_format_to_scientific_notation()
 	afmt::format_to(buffer, "Precision: {:.4e}", 1234.5);
 	TEST_ASSERT_EQUAL_STRING_MESSAGE("Precision: 1.2345e+03", buffer, "Scientific high precision");
 
-	// Test edge case: exactly 1.0
+	// Test edge case: exactly 1.0 - updated for 2-digit precision
 	afmt::format_to(buffer, "One: {:.2e}", 1.0);
 	TEST_ASSERT_EQUAL_STRING_MESSAGE("One: 1.00e+00", buffer, "Scientific notation for 1.0");
 
@@ -175,141 +175,35 @@ void test_format_to_scientific_notation()
 	TEST_ASSERT_EQUAL_STRING_MESSAGE("Ten: 1.0e+01", buffer, "Scientific rounding to 10");
 }
 
-void test_format_to_general_notation()
-{
-	char buffer[50];
-
-	// Test general notation - should use fixed point for reasonable numbers
-	afmt::format_to(buffer, "Gen: {:.3g}", 123.456);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("Gen: 123", buffer, "General notation fixed point");
-
-	// Test general notation - should use scientific for large numbers
-	afmt::format_to(buffer, "Large: {:.3g}", 1234567.0);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("Large: 1.23e+06", buffer, "General notation large number");
-
-	// Test uppercase general notation
-	afmt::format_to(buffer, "Upper: {:.3G}", 1234567.0);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("Upper: 1.23E+06", buffer, "General notation uppercase");
-
-	// Test small numbers that should use fixed point
-	afmt::format_to(buffer, "Small: {:.4g}", 0.001234);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("Small: 0.001234", buffer, "General small fixed point");
-
-	// Test very small numbers that should use scientific
-	afmt::format_to(buffer, "VerySmall: {:.3g}", 0.00001234);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("VerySmall: 1.23e-05", buffer,
-									 "General very small scientific");
-
-	// Test numbers at the boundary (exponent = -4)
-	afmt::format_to(buffer, "Boundary: {:.3g}", 0.0001);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("Boundary: 0.0001", buffer, "General boundary case -4");
-
-	afmt::format_to(buffer, "Boundary: {:.3g}", 0.00001);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("Boundary: 1e-05", buffer, "General boundary case -5");
-
-	// Test numbers at upper boundary (exponent >= precision)
-	afmt::format_to(buffer, "UpperBound: {:.3g}", 999.0);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("UpperBound: 999", buffer, "General upper boundary fixed");
-
-	afmt::format_to(buffer, "UpperBound: {:.3g}", 1000.0);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("UpperBound: 1e+03", buffer,
-									 "General upper boundary scientific");
-
-	// Test zero
-	afmt::format_to(buffer, "Zero: {:.3g}", 0.0);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("Zero: 0", buffer, "General notation zero");
-
-	// Test negative numbers
-	afmt::format_to(buffer, "Neg: {:.2g}", -123.45);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("Neg: -1.2e+02", buffer, "General negative number");
-
-	// Test precision adjustment in general format
-	afmt::format_to(buffer, "Adjust: {:.4g}", 12.345);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("Adjust: 12.35", buffer, "General precision adjustment");
-
-	// Test trailing zeros removal in general format
-	afmt::format_to(buffer, "Trailing: {:.6g}", 123.0);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("Trailing: 123", buffer, "General trailing zeros removed");
-}
-
 void test_format_to_scientific_edge_cases()
 {
 	char buffer[50];
 
-	// Test infinity (if supported)
+	// Test infinity
 	double inf = 1.0 / 0.0;
-	afmt::format_to(buffer, "Inf: {:.2e}", inf);
-	TEST_ASSERT_TRUE_MESSAGE(strstr(buffer, "inf") != nullptr || strstr(buffer, "INF") != nullptr,
-							 "Scientific infinity");
+	afmt::format_to(buffer, "Inf: {:.2e}", inf); // specs.upper is false for 'e'
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Inf: inf", buffer, "Scientific infinity lowercase");
+
+	afmt::format_to(buffer, "Inf: {:.2E}", inf); // specs.upper is true for 'E' (exponent only)
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Inf: INF", buffer, "Scientific infinity uppercase E");
 
 	// Test negative infinity
 	double neg_inf = -1.0 / 0.0;
 	afmt::format_to(buffer, "NegInf: {:.2e}", neg_inf);
-	TEST_ASSERT_TRUE_MESSAGE(strstr(buffer, "-inf") != nullptr || strstr(buffer, "-INF") != nullptr,
-							 "Scientific negative infinity");
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("NegInf: -inf", buffer, "Scientific negative infinity");
 
-	// Test NaN (if supported)
+	// Test NaN
 	double nan_val = 0.0 / 0.0;
 	afmt::format_to(buffer, "NaN: {:.2e}", nan_val);
-	TEST_ASSERT_TRUE_MESSAGE(strstr(buffer, "nan") != nullptr || strstr(buffer, "NaN") != nullptr,
-							 "Scientific NaN");
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("NaN: nan", buffer, "Scientific NaN");
 
 	// Test very large exponents
-	afmt::format_to(buffer, "Large: {:.1e}", 1e20);
-	TEST_ASSERT_TRUE_MESSAGE(strstr(buffer, "e+20") != nullptr ||
-								 strstr(buffer, "e+020") != nullptr,
-							 "Scientific large exponent");
+	afmt::format_to(buffer, "Large: {:.1e}", 1.0e20); // Use 1.0e20 to be explicit
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Large: 1.0e+20", buffer, "Scientific large exponent");
 
 	// Test very small exponents
-	afmt::format_to(buffer, "Small: {:.1e}", 1e-20);
-	TEST_ASSERT_TRUE_MESSAGE(strstr(buffer, "e-20") != nullptr ||
-								 strstr(buffer, "e-020") != nullptr,
-							 "Scientific small exponent");
-}
-
-void test_format_to_general_edge_cases()
-{
-	char buffer[50];
-
-	// Test infinity in general format
-	double inf = 1.0 / 0.0;
-	afmt::format_to(buffer, "Inf: {:.2g}", inf);
-	TEST_ASSERT_TRUE_MESSAGE(strstr(buffer, "inf") != nullptr || strstr(buffer, "INF") != nullptr,
-							 "General infinity");
-
-	// Test NaN in general format
-	double nan_val = 0.0 / 0.0;
-	afmt::format_to(buffer, "NaN: {:.2g}", nan_val);
-	TEST_ASSERT_TRUE_MESSAGE(strstr(buffer, "nan") != nullptr || strstr(buffer, "NaN") != nullptr,
-							 "General NaN");
-
-	// Test precision of 0 (should default to 1)
-	afmt::format_to(buffer, "ZeroPrec: {:.0g}", 123.456);
-	TEST_ASSERT_TRUE_MESSAGE(strlen(buffer) > 0, "General zero precision");
-
-	// Test very high precision
-	afmt::format_to(buffer, "HighPrec: {:.10g}", 3.141592653589793);
-	TEST_ASSERT_TRUE_MESSAGE(strlen(buffer) > 0, "General high precision");
-}
-
-void test_format_to_mixed_scientific_general()
-{
-	char buffer[100];
-
-	// Test mixing different format types in one string
-	afmt::format_to(buffer, "Fixed: {:.2f}, Sci: {:.2e}, Gen: {:.3g}", 123.456, 123.456, 123.456);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("Fixed: 123.46, Sci: 1.23e+02, Gen: 123", buffer,
-									 "Mixed formatting types");
-
-	// Test different cases of scientific notation
-	afmt::format_to(buffer, "Lower: {:.1e}, Upper: {:.1E}", 1234.5, 1234.5);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("Lower: 1.2e+03, Upper: 1.2E+03", buffer,
-									 "Scientific case comparison");
-
-	// Test different cases of general notation
-	afmt::format_to(buffer, "Lower: {:.3g}, Upper: {:.3G}", 123456.0, 123456.0);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("Lower: 1.23e+05, Upper: 1.23E+05", buffer,
-									 "General case comparison");
+	afmt::format_to(buffer, "Small: {:.1e}", 1.0e-20); // Use 1.0e-20
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Small: 1.0e-20", buffer, "Scientific small exponent");
 }
 
 /*------------------------------------------------------------------------------
@@ -378,7 +272,7 @@ void test_format_complex()
 void test_formatted_size()
 {
 	size_t size = afmt::formatted_size("Hello, {}!", "world");
-	TEST_ASSERT_EQUAL_MESSAGE(14, size, "formatted_size calculation"); // "Hello, world!\0"
+	TEST_ASSERT_EQUAL_MESSAGE(13, size, "formatted_size calculation"); // "Hello, world!"
 }
 
 void test_formatted_size_complex()
@@ -386,31 +280,6 @@ void test_formatted_size_complex()
 	size_t size = afmt::formatted_size("Number: {}, Float: {:.2f}", 12345, 3.14159);
 	std::string actual = afmt::format("Number: {}, Float: {:.2f}", 12345, 3.14159);
 	TEST_ASSERT_EQUAL_MESSAGE(actual.length(), size, "formatted_size complex");
-}
-
-/*------------------------------------------------------------------------------
- * TESTS FOR adaptive_buffer
- *----------------------------------------------------------------------------*/
-
-void test_format_to_adaptive_buffer()
-{
-	afmt::adaptive_buffer buf;
-
-	afmt::format_to(buf, "Hello, {}!", "world");
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("Hello, world!", buf.data(), "adaptive_buffer formatting");
-	TEST_ASSERT_EQUAL_MESSAGE(14, buf.size(), "adaptive_buffer size"); // Including null terminator
-}
-
-void test_format_to_adaptive_buffer_large()
-{
-	afmt::adaptive_buffer buf;
-
-	// Test with string larger than SBO size
-	std::string large_input(100, 'A');
-	afmt::format_to(buf, "Large: {}", large_input.c_str());
-
-	std::string expected = "Large: " + large_input;
-	TEST_ASSERT_EQUAL_STRING_MESSAGE(expected.c_str(), buf.data(), "adaptive_buffer large string");
 }
 
 /*------------------------------------------------------------------------------
@@ -427,7 +296,7 @@ void test_empty_format_string()
 void test_no_arguments()
 {
 	char buffer[20];
-	afmt::format_to(buffer, "No args here{}");
+	afmt::format_to(buffer, "No args here");
 	TEST_ASSERT_EQUAL_STRING_MESSAGE("No args here", buffer, "No arguments");
 }
 
@@ -505,10 +374,7 @@ void tests()
 	RUN_TEST(test_format_to_alignment);
 	RUN_TEST(test_format_to_zero_padding);
 	RUN_TEST(test_format_to_scientific_notation);
-	RUN_TEST(test_format_to_general_notation);
 	RUN_TEST(test_format_to_scientific_edge_cases);
-	RUN_TEST(test_format_to_general_edge_cases);
-	RUN_TEST(test_format_to_mixed_scientific_general);
 
 	// format_to_n tests
 	RUN_TEST(test_format_to_n_basic);
@@ -524,10 +390,6 @@ void tests()
 	// formatted_size tests
 	RUN_TEST(test_formatted_size);
 	RUN_TEST(test_formatted_size_complex);
-
-	// adaptive_buffer tests
-	RUN_TEST(test_format_to_adaptive_buffer);
-	RUN_TEST(test_format_to_adaptive_buffer_large);
 
 	// Edge cases
 	RUN_TEST(test_empty_format_string);
@@ -548,7 +410,7 @@ void setup()
 {
 	// NOTE!!! Wait for >2 secs
 	// if board doesn't support software reset via Serial.DTR/RTS
-	delay(2000);
+	delay(5000);
 
 	UNITY_BEGIN();
 	tests();

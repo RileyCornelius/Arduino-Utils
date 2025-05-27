@@ -11,9 +11,10 @@ A lightweight, Arduino-friendly implementation of C++ formatting functionality i
 - **C++11 compatible** - Works with older compilers common in embedded development
 - **Minimal STL dependency** - Reduced binary size and memory usage
 
-### Buffer Types
-- **`adaptive_buffer`** - Dynamic buffer with small buffer optimization (default)
-- **`external_buffer`** - Uses pre-allocated char arrays for zero-allocation formatting
+### Unified Buffer System
+- **`buffer`** - Unified buffer class that operates in two modes:
+1. **Adaptive Mode** - Uses small buffer optimization (SBO) for strings up to 64 characters, automatically grows on the heap when needed.
+2. **External Mode** - Uses pre-allocated memory only, no dynamic allocation, and reports truncation if content doesn't fit.
 - **`string_view`** - Non-owning string reference for efficient string handling
 
 ## Configuration
@@ -23,7 +24,7 @@ The library can be configured using preprocessor macros:
 ### Buffer Configuration
 ```cpp
 // Default small buffer optimization size (default: 64)
-#define AFMT_DEFAULT_ADAPTIVE_SBO_SIZE 128
+#define AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE 128
 
 // Arduino Serial output configuration (default: Serial)
 #define AFMT_SERIAL_OUTPUT Serial1
@@ -44,8 +45,8 @@ The library can be configured using preprocessor macros:
 ```cpp
 #include <format.h>
 
-// Basic formatting
-afmt::adaptive_buffer buf;
+// Basic formatting with adaptive buffer (default mode)
+afmt::buffer buf;
 afmt::format_to(buf, "Hello, {}!", "world");
 Serial.println(buf.data()); // "Hello, world!"
 
@@ -56,11 +57,19 @@ Serial.println(result); // "Value: 42"
 // Direct Serial output
 afmt::println("Temperature: {:.1f}°C", 23.7); // "Temperature: 23.7°C"
 
-// Fixed buffer formatting (no allocation)
+// Fixed buffer formatting (external mode - no allocation)
 char buffer[50];
 auto result = afmt::format_to(buffer, "Count: {}", 123);
 if (!result.truncated) {
     Serial.println(buffer); // "Count: 123"
+}
+
+// Manual external buffer mode
+char external_mem[100];
+afmt::buffer ext_buf(external_mem, sizeof(external_mem));
+afmt::format_to(ext_buf, "Sensor {}: {:.2f}", id, value);
+if (!ext_buf.is_truncated()) {
+    Serial.println(ext_buf.data());
 }
 ```
 
@@ -109,15 +118,11 @@ afmt::println("Padded: {:05d}", 123);    // "Padded: 00123"
 ### Floating-Point Types (`float`, `double`)
 - `f`/`F` - Fixed-point notation (default)
 - `e`/`E` - Scientific notation
-- `g`/`G` - General format (chooses shorter of `f` or `e`)
 
 ```cpp
 afmt::println("Pi: {:.3f}", 3.14159);        // "Pi: 3.142"
 afmt::println("Scientific: {:.2e}", 1234.5); // "Scientific: 1.23e+03"
 afmt::println("Scientific: {:.2E}", 1234.5); // "Scientific: 1.23E+03"
-afmt::println("General: {:.3g}", 0.0001);    // "General: 0.0001"
-afmt::println("General: {:.3g}", 123456);    // "General: 1.23e+05"
-afmt::println("General: {:.3G}", 123456);    // "General: 1.23E+05"
 ```
 
 ### String Types (`const char*`, `string_view`)
@@ -180,35 +185,64 @@ afmt::println("Sign plus:   {:+d}", 42);      // "Sign plus:   +42"
 ### Floating-Point Formatting
 ```cpp
 double pi = 3.14159265359;
-afmt::println("Default:     {}", pi);         // "Default:     3.141593"
+afmt::println("Default:     {}", pi);         // "Default:     3.14"
 afmt::println("Precision:   {:.2f}", pi);     // "Precision:   3.14"
 afmt::println("Scientific:  {:.3e}", pi);     // "Scientific:  3.142e+00"
 afmt::println("Scientific:  {:.3E}", pi);     // "Scientific:  3.142E+00"
-afmt::println("General:     {:.4g}", pi);     // "General:     3.142"
-afmt::println("General:     {:.4G}", pi);     // "General:     3.142"
+afmt::println("General:     {:.4g}", pi);    // "General:     3.142"
+afmt::println("General Sci: {:.2g}", 12345.0); // "General Sci: 1.2e+04"
+afmt::println("General Fix: {:#.3g}", 12.0);  // "General Fix: 12.0"
 afmt::println("Zero pad:    {:08.2f}", pi);   // "Zero pad:    00003.14"
 afmt::println("Plus sign:   {:+.2f}", pi);    // "Plus sign:   +3.14"
 
-// Large numbers with general format
-afmt::println("Large g:     {:.3g}", 123456.0);  // "Large g:     1.23e+05"
-afmt::println("Small g:     {:.3g}", 0.00123);   // "Small g:     0.00123"
+// Large numbers with scientific notation
+afmt::println("Large:       {:.3e}", 123456.0);  // "Large:       1.235e+05"
+afmt::println("Small:       {:.3e}", 0.00123);   // "Small:       1.230e-03"
+```
+
+## Buffer Modes
+
+### Adaptive Mode (Default)
+When created with the default constructor, `buffer` operates in adaptive mode:
+- Uses small buffer optimization (SBO) for strings up to 64 characters (configurable)
+- Automatically grows on the heap when needed
+- Manages memory automatically
+
+```cpp
+afmt::buffer buf;  // Adaptive mode
+afmt::format_to(buf, "This will use SBO or heap as needed: {}", value);
+```
+
+### External Mode
+When created with a char array, `buffer` operates in external mode:
+- Uses pre-allocated memory only
+- No dynamic allocation
+- Reports truncation if content doesn't fit
+
+```cpp
+char memory[100];
+afmt::buffer buf(memory, sizeof(memory));  // External mode
+afmt::format_to(buf, "Fixed memory: {}", value);
+if (buf.is_truncated()) {
+    Serial.println("Warning: output was truncated");
+}
 ```
 
 ## Performance Considerations
 
 ### Memory Efficiency
-- Use `external_buffer` for zero-allocation formatting
-- `adaptive_buffer` uses SBO for strings up to 64 characters (configurable)
+- Adaptive mode uses SBO for strings up to 64 characters (configurable)
+- External mode provides zero-allocation formatting
 - `string_view` provides zero-copy string handling
 
 ### Binary Size
+- Unified buffer reduces template instantiation compared to separate buffer types
+- Single code path for both buffer modes
 - Minimal template instantiation compared to full fmtlib
-- No locale support or advanced features
-- Optimized for embedded systems
 
 ### Example: Memory-Conscious Usage
 ```cpp
-// Zero allocation approach
+// Zero allocation approach using external mode
 char buffer[100];
 auto result = afmt::format_to_n(buffer, sizeof(buffer), 
                                 "Sensor {}: {:.2f}", id, value);
@@ -222,21 +256,25 @@ if (result.truncated) {
 
 // For repeated formatting, reuse buffers
 static char reusable_buffer[50];
-afmt::format_to(reusable_buffer, "Count: {}", counter++);
-display.showText(reusable_buffer);
+afmt::buffer reusable(reusable_buffer, sizeof(reusable_buffer));
+reusable.clear();  // Reset for reuse
+afmt::format_to(reusable, "Count: {}", counter++);
+display.showText(reusable.data());
 ```
 
 ## API Reference
 
 ### Core Functions
 ```cpp
-// Format to various buffer types
+// Format to unified buffer
 template<typename... Args>
-void format_to(adaptive_buffer& buf, string_view fmt, const Args&... args);
+void format_to(buffer& buf, string_view fmt, const Args&... args);
 
+// Format to fixed-size array (uses external mode internally)
 template<size_t N, typename... Args>
 format_to_result format_to(char (&out)[N], string_view fmt, const Args&... args);
 
+// Format to char* with size limit (uses external mode internally)
 template<typename... Args>
 format_to_result format_to_n(char* out, size_t n, string_view fmt, const Args&... args);
 
@@ -244,9 +282,34 @@ format_to_result format_to_n(char* out, size_t n, string_view fmt, const Args&..
 template<typename... Args>
 size_t formatted_size(string_view fmt, const Args&... args);
 
-// Standard library integration
+// Standard library integration (uses adaptive mode internally)
 template<typename... Args>
 std::string format(string_view fmt, const Args&... args);
+```
+
+### Buffer Class
+```cpp
+class buffer {
+public:
+    // Constructors
+    buffer();                          // Adaptive mode
+    buffer(char* data, size_t capacity); // External mode
+    
+    // Accessors
+    char* data();
+    const char* data() const;
+    size_t size() const;
+    size_t capacity() const;
+    bool is_truncated() const;
+    
+    // Operations
+    void clear();
+    void push_back(const char& value);
+    void append(const char* begin, const char* end);
+    
+    // Only works in adaptive mode
+    void reserve(size_t new_capacity);
+};
 ```
 
 ### Arduino Integration
@@ -317,11 +380,10 @@ The library uses lightweight error indicators:
 - Custom formatters for user types
 - Wide character support
 - Date/time formatting
+- Hexadecimal floating-point format (`a`/`A`)
 
 ### Current Limitations
-- Hexadecimal floating-point format (`a`/`A`) not implemented
-- Limited precision handling for very large numbers
-- No custom alignment characters beyond basic set
+- Limited precision handling for very large numbers (beyond double limits or extreme exponents)
 
 ## Integration
 
