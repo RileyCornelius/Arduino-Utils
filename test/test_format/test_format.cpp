@@ -334,9 +334,9 @@ void test_aformat_complex()
 
 void test_performance_basic()
 {
-	// Just verify that formatting many times doesn't crash
 	char buffer[100];
 
+	// Simple performance test: format a string multiple times
 	for(int i = 0; i < 100; ++i)
 	{
 		afmt::format_to(buffer, "Iteration: {}, Value: {:.2f}", i, i * 1.5);

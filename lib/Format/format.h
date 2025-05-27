@@ -770,9 +770,10 @@ public:
     };
 
     AFMT_CONSTEXPR format_arg_value() : type_(type::none_type) {}
-
     AFMT_CONSTEXPR format_arg_value(int value) : type_(type::int_type) { value_.int_value = value; }
     AFMT_CONSTEXPR format_arg_value(unsigned value) : type_(type::uint_type) { value_.uint_value = value; }
+    AFMT_CONSTEXPR format_arg_value(long value) : type_(type::long_long_type) { value_.long_long_value = value; }
+    AFMT_CONSTEXPR format_arg_value(unsigned long value) : type_(type::ulong_long_type) { value_.ulong_long_value = value; }
     AFMT_CONSTEXPR format_arg_value(long long value) : type_(type::long_long_type) { value_.long_long_value = value; }
     AFMT_CONSTEXPR format_arg_value(unsigned long long value) : type_(type::ulong_long_type) { value_.ulong_long_value = value; }
     AFMT_CONSTEXPR format_arg_value(bool value) : type_(type::bool_type) { value_.bool_value = value; }
@@ -993,26 +994,26 @@ inline void to_string(double value, buffer &out, format_specs specs)
         return;
     }
 
-    // Handle infinity
-    if (value == value + 1.0 && value > 0) // Positive infinity
+    // Handle infinity - use a more robust check
+    // Check if value is infinite by comparing with known large finite values
+    const double max_finite = 1.7976931348623157e+308; // Approximate DBL_MAX
+    bool is_infinite = false;
+
+    if (value > 0)
     {
-        if (specs.upper)
-        {
-            out.push_back('I');
-            out.push_back('N');
-            out.push_back('F');
-        }
-        else
-        {
-            out.push_back('i');
-            out.push_back('n');
-            out.push_back('f');
-        }
-        return;
+        is_infinite = (value > max_finite) || (value == value * 2.0 && value != 0.0);
     }
-    if (value == value + 1.0 && value < 0) // Negative infinity
+    else if (value < 0)
     {
-        out.push_back('-');
+        is_infinite = (value < -max_finite) || (value == value * 2.0 && value != 0.0);
+    }
+
+    if (is_infinite)
+    {
+        if (value < 0)
+        {
+            out.push_back('-');
+        }
         if (specs.upper)
         {
             out.push_back('I');
