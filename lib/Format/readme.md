@@ -12,9 +12,12 @@ A lightweight, Arduino-friendly implementation of C++ formatting functionality i
 - **Minimal STL dependency** - Reduced binary size and memory usage
 
 ### Unified Buffer System
-- **`buffer`** - Unified buffer class that operates in two modes:
-1. **Adaptive Mode** - Uses small buffer optimization (SBO) for strings up to 64 characters, automatically grows on the heap when needed.
-2. **External Mode** - Uses pre-allocated memory only, no dynamic allocation, and reports truncation if content doesn't fit.
+The library uses a unified `buffer` class that operates in three modes:
+
+1. **Adaptive Mode (SBO)** - Uses small buffer optimization for strings up to 64 characters (configurable), automatically grows on the heap when needed.
+2. **Adaptive Mode (Heap)** - Automatically transitions to heap allocation for larger strings.
+3. **External Mode** - Uses pre-allocated memory only, no dynamic allocation, and reports truncation if content doesn't fit.
+
 - **`string_view`** - Non-owning string reference for efficient string handling
 
 ## Configuration
@@ -84,9 +87,9 @@ The format specification follows the pattern: `{[arg_id][:format_spec]}`
 
 ### Alignment Options
 - `<` - Left align (default for strings)
-- `>` - Right align (default for numbers)
+- `>` - Right align (default for numbers)  
 - `^` - Center align
-- `=` - Numeric alignment (sign-aware padding)
+- **Note**: Numeric alignment (`=`) is implemented as `align::numeric` internally but uses `0` padding syntax
 
 ### Sign Options
 - `+` - Always show sign for numbers
@@ -94,10 +97,10 @@ The format specification follows the pattern: `{[arg_id][:format_spec]}`
 - ` ` (space) - Use space for positive numbers, minus for negative
 
 ### Other Options
-- `#` - Alternate form (adds prefixes like `0x` for hex)
+- `#` - Alternate form (adds prefixes like `0x` for hex, `0b` for binary, `0` for octal)
 - `0` - Zero padding (equivalent to fill='0' with numeric alignment)
 - `width` - Minimum field width
-- `.precision` - Precision for floating-point or max chars for strings
+- `.precision` - Precision for floating-point numbers
 
 ## Type Specifiers
 
@@ -116,11 +119,12 @@ afmt::println("Padded: {:05d}", 123);    // "Padded: 00123"
 ```
 
 ### Floating-Point Types (`float`, `double`)
-- `f`/`F` - Fixed-point notation (default)
+- `f`/`F` - Fixed-point notation (default, precision defaults to 2)
 - `e`/`E` - Scientific notation
 
 ```cpp
 afmt::println("Pi: {:.3f}", 3.14159);        // "Pi: 3.142"
+afmt::println("Default: {}", 3.14159);       // "Default: 3.14" (precision 2)
 afmt::println("Scientific: {:.2e}", 1234.5); // "Scientific: 1.23e+03"
 afmt::println("Scientific: {:.2E}", 1234.5); // "Scientific: 1.23E+03"
 ```
@@ -129,17 +133,17 @@ afmt::println("Scientific: {:.2E}", 1234.5); // "Scientific: 1.23E+03"
 - `s` - String format (default)
 
 ```cpp
-afmt::println("Name: {:>10s}", "Alice");  // "Name:      Alice"
-afmt::println("Trim: {:.5s}", "Hello World"); // "Trim: Hello"
+afmt::println("Name: {:>10}", "Alice");       // "Name:      Alice"
+afmt::println("Trim: {:.5}", "Hello World"); // **Note**: Precision for strings not implemented
 ```
 
 ### Character Type (`char`)
-- `c` - Character format (default)
+- Default: Character output
 - `d` - Decimal value of character
 
 ```cpp
-afmt::println("Char: {:c}", 65);         // "Char: A"
-afmt::println("ASCII: {:d}", 'A');       // "ASCII: 65"
+afmt::println("Char: {}", 'A');             // "Char: A"
+afmt::println("ASCII: {:d}", 'A');          // **Note**: Not implemented - outputs 'A'
 ```
 
 ### Boolean Type (`bool`)
@@ -152,11 +156,12 @@ afmt::println("Numeric: {:d}", false);   // "Numeric: 0"
 ```
 
 ### Pointer Types
-- `p` - Pointer format (default: hexadecimal with `0x` prefix)
+- Default: Pointer format (hexadecimal with `0x` prefix)
 
 ```cpp
 int value = 42;
-afmt::println("Pointer: {:p}", &value);  // "Pointer: 0x7fff5fbff6ac"
+afmt::println("Pointer: {}", &value);     // "Pointer: 0x7fff5fbff6ac"
+afmt::println("Null: {}", nullptr);      // "Null: nullptr"
 ```
 
 ## Formatting Examples
@@ -176,7 +181,9 @@ afmt::println("Hex:         {:x}", 42);       // "Hex:         2a"
 afmt::println("Hex upper:   {:X}", 42);       // "Hex upper:   2A"
 afmt::println("Hex prefix:  {:#x}", 42);      // "Hex prefix:  0x2a"
 afmt::println("Binary:      {:b}", 42);       // "Binary:      101010"
+afmt::println("Bin prefix:  {:#b}", 42);      // "Bin prefix:  0b101010"
 afmt::println("Octal:       {:o}", 42);       // "Octal:       52"
+afmt::println("Oct prefix:  {:#o}", 42);      // "Oct prefix:  052"
 afmt::println("Zero pad:    {:05d}", 42);     // "Zero pad:    00042"
 afmt::println("Sign space:  {: d}", 42);      // "Sign space:   42"
 afmt::println("Sign plus:   {:+d}", 42);      // "Sign plus:   +42"
@@ -187,17 +194,19 @@ afmt::println("Sign plus:   {:+d}", 42);      // "Sign plus:   +42"
 double pi = 3.14159265359;
 afmt::println("Default:     {}", pi);         // "Default:     3.14"
 afmt::println("Precision:   {:.2f}", pi);     // "Precision:   3.14"
+afmt::println("High Prec:   {:.5f}", pi);     // "High Prec:   3.14159"
 afmt::println("Scientific:  {:.3e}", pi);     // "Scientific:  3.142e+00"
 afmt::println("Scientific:  {:.3E}", pi);     // "Scientific:  3.142E+00"
-afmt::println("General:     {:.4g}", pi);    // "General:     3.142"
-afmt::println("General Sci: {:.2g}", 12345.0); // "General Sci: 1.2e+04"
-afmt::println("General Fix: {:#.3g}", 12.0);  // "General Fix: 12.0"
 afmt::println("Zero pad:    {:08.2f}", pi);   // "Zero pad:    00003.14"
 afmt::println("Plus sign:   {:+.2f}", pi);    // "Plus sign:   +3.14"
 
 // Large numbers with scientific notation
-afmt::println("Large:       {:.3e}", 123456.0);  // "Large:       1.235e+05"
-afmt::println("Small:       {:.3e}", 0.00123);   // "Small:       1.230e-03"
+afmt::println("Large:       {:.1e}", 1.0e20);    // "Large:       1.0e+20"
+afmt::println("Small:       {:.1e}", 1.0e-20);   // "Small:       1.0e-20"
+
+// Special values
+afmt::println("Infinity:    {:.2e}", 1.0/0.0);   // "Infinity:    inf"
+afmt::println("NaN:         {:.2e}", 0.0/0.0);   // "NaN:         nan"
 ```
 
 ## Buffer Modes
@@ -209,8 +218,9 @@ When created with the default constructor, `buffer` operates in adaptive mode:
 - Manages memory automatically
 
 ```cpp
-afmt::buffer buf;  // Adaptive mode
+afmt::buffer buf;  // Adaptive mode (starts with SBO)
 afmt::format_to(buf, "This will use SBO or heap as needed: {}", value);
+Serial.println(buf.is_sbo() ? "Using SBO" : "Using heap");
 ```
 
 ### External Mode
@@ -225,6 +235,20 @@ afmt::buffer buf(memory, sizeof(memory));  // External mode
 afmt::format_to(buf, "Fixed memory: {}", value);
 if (buf.is_truncated()) {
     Serial.println("Warning: output was truncated");
+}
+```
+
+### Buffer State Checking
+```cpp
+afmt::buffer buf;
+// ... format operations ...
+
+if (buf.is_sbo()) {
+    Serial.println("Using small buffer optimization");
+} else if (buf.is_heap()) {
+    Serial.println("Using heap allocation");
+} else if (buf.is_external()) {
+    Serial.println("Using external memory");
 }
 ```
 
@@ -292,8 +316,10 @@ std::string format(string_view fmt, const Args&... args);
 class buffer {
 public:
     // Constructors
-    buffer();                          // Adaptive mode
-    buffer(char* data, size_t capacity); // External mode
+    buffer();                              // Adaptive mode (starts with SBO)
+    buffer(char* data, size_t capacity);   // External mode
+    template<size_t N>
+    buffer(char (&arr)[N]);               // External mode with array
     
     // Accessors
     char* data();
@@ -302,6 +328,11 @@ public:
     size_t capacity() const;
     bool is_truncated() const;
     
+    // Mode checking
+    bool is_sbo() const;      // Small buffer optimization
+    bool is_heap() const;     // Heap allocated
+    bool is_external() const; // External memory
+    
     // Operations
     void clear();
     void push_back(const char& value);
@@ -309,6 +340,13 @@ public:
     
     // Only works in adaptive mode
     void reserve(size_t new_capacity);
+};
+
+struct format_to_result {
+    char* out;
+    bool truncated;
+    
+    operator char*() const; // Implicit conversion to char*
 };
 ```
 
@@ -368,7 +406,8 @@ SD.write(log_entry.c_str());
 
 The library uses lightweight error indicators:
 - `format_to_result.truncated` indicates if output was truncated
-- Invalid format specifiers are handled gracefully
+- `buffer.is_truncated()` indicates if buffer operations were truncated
+- Invalid format specifiers are handled gracefully (often output as-is)
 - No exceptions are thrown (embedded-friendly)
 
 ## Limitations
@@ -380,10 +419,23 @@ The library uses lightweight error indicators:
 - Custom formatters for user types
 - Wide character support
 - Date/time formatting
-- Hexadecimal floating-point format (`a`/`A`)
 
-### Current Limitations
-- Limited precision handling for very large numbers (beyond double limits or extreme exponents)
+### Current Implementation Limitations
+- General format specifier (`g`/`G`) not implemented for floating-point
+- Hexadecimal floating-point format (`a`/`A`) not implemented
+- Character type specifier (`c`) for non-char types not implemented
+- Precision for string truncation not implemented
+- Limited precision handling for very large numbers (beyond double limits)
+- Debug specifier (`?`) not implemented
+
+### Type Support
+The library supports the following argument types:
+- Integer types: `int`, `unsigned`, `long`, `unsigned long`, `long long`, `unsigned long long`
+- Floating-point: `float`, `double`
+- Character: `char`
+- Boolean: `bool`
+- String: `const char*`, `string_view`
+- Pointer: Any pointer type (formatted as hexadecimal)
 
 ## Integration
 
@@ -405,3 +457,18 @@ using namespace afmt; // Optional: for shorter syntax
 - **Platform**: ESP32, ESP8266, AVR, STM32, etc.
 - **Compiler**: GCC 4.8+, Clang 3.4+
 - **C++ Standard**: C++11 or later
+
+## Testing
+
+The library includes comprehensive unit tests covering:
+- Basic string formatting
+- Integer formatting (decimal, hex, octal, binary)
+- Floating-point formatting (fixed, scientific)
+- Alignment and padding
+- Zero padding with signs and prefixes
+- Scientific notation edge cases (infinity, NaN, large/small numbers)
+- Buffer truncation handling
+- Arduino String integration
+- Performance benchmarking
+
+Run tests with: `pio test -e your_target_environment`
