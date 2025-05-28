@@ -98,11 +98,23 @@ static_assert(LOG_PRINT_TYPE >= LOG_PRINT_TYPE_PRINTF || LOG_PRINT_TYPE <= LOG_P
 static_assert(LOG_FILENAME == LOG_FILENAME_DISABLE || LOG_FILENAME == LOG_FILENAME_ENABLE, "LOG_FILENAME must be either LOG_FILENAME_DISABLE or LOG_FILENAME_ENABLE");
 static_assert(LOG_COLORS == LOG_COLORS_DISABLE || LOG_COLORS == LOG_COLORS_ENABLE, "LOG_COLORS must be either LOG_COLORS_DISABLE or LOG_COLORS_ENABLE");
 
+#include <format.h>
+
 /**--------------------------------------------------------------------------------------
  * Logger Private Functions
  *-------------------------------------------------------------------------------------*/
 namespace _logger
 {
+#if LOG_LEVEL > LOG_LEVEL_DISABLE && LOG_PRINT_TYPE == LOG_PRINT_TYPE_CUSTOM_FORMAT
+    template <typename... Args>
+    void print(const char *format, const Args &...args)
+    {
+        afmt::buffer buf;
+        afmt::format_to(buf, format, args...);
+        LOG_OUTPUT.print(buf.c_str());
+    }
+#endif
+
 #if LOG_LEVEL > LOG_LEVEL_DISABLE && LOG_PRINT_TYPE == LOG_PRINT_TYPE_PRINTF
     void vprintf(const char *format, va_list arg);
     void printf(const char *format, ...);
@@ -281,8 +293,7 @@ namespace _logger
 #define LOG_PRINTF(msg, ...) LOG_OUTPUT.print(fmt::format(msg, ##__VA_ARGS__).c_str())
 // Default to printf
 #elif LOG_PRINT_TYPE == LOG_PRINT_TYPE_CUSTOM_FORMAT
-#include <format.h>
-#define LOG_PRINTF(msg, ...) LOG_OUTPUT.print(afmt::aformat(msg, ##__VA_ARGS__))
+#define LOG_PRINTF(msg, ...) _logger::print(msg, ##__VA_ARGS__)
 #else
 #define LOG_PRINTF(msg, ...) _logger::printf(msg, ##__VA_ARGS__)
 #endif

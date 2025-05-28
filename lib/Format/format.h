@@ -306,6 +306,24 @@ public:
     AFMT_CONSTEXPR size_t capacity() const { return capacity_; }
     AFMT_CONSTEXPR bool is_truncated() const { return truncated_; }
 
+    char *c_str()
+    {
+        // null is all ready added
+        if (buffer_mode::external_static == mode_)
+        {
+            return data_;
+        }
+
+        if (size_ >= capacity_)
+        {
+            reserve(size_ + 1);
+        }
+
+        // add null terminator
+        data_[size_] = '\0';
+        return data_;
+    }
+
     void clear()
     {
         size_ = 0;
