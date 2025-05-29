@@ -1077,8 +1077,38 @@ inline void to_string(double value, buffer &out, format_specs specs)
     // Default type for float/double is general if 'none'
     if (specs.type == presentation_type::none)
     {
-        // For default {} format, use a different approach than explicit {:g}
-        // For small integers represented as doubles, show them as integers
+        // For default {} format, use smart formatting
+        // Check if this is a "nice" decimal that should display cleanly
+        double rounded = value;
+        
+        // Check if value is close to a reasonable decimal representation
+        if (value > 0.0001 && value < 1e15)
+        {
+            // Try rounding to various decimal places to see if we get a clean representation
+            for (int test_precision = 1; test_precision <= 15; ++test_precision)
+            {
+                double scale = 1.0;
+                for (int i = 0; i < test_precision; ++i)
+                {
+                    scale *= 10.0;
+                }
+                
+                double test_rounded = (value * scale + 0.5) / scale;
+                double diff = test_rounded - value;
+                if (diff < 0) diff = -diff; // abs
+                
+                // If the rounded value is very close to the original, use it
+                if (diff < value * 1e-15 || diff < 1e-15)
+                {
+                    rounded = test_rounded;
+                    break;
+                }
+            }
+        }
+        
+        value = rounded;
+        
+        // Check if this is effectively an integer
         if (value == static_cast<double>(static_cast<long long>(value)) && value < 1e15)
         {
             format_specs int_specs;
@@ -1086,25 +1116,10 @@ inline void to_string(double value, buffer &out, format_specs specs)
             return;
         }
         
-        // but doesn't show floating-point artifacts
         specs.type = presentation_type::general;
-        
         if (specs.precision == -1)
         {
-            // Use a precision that captures the meaningful digits without artifacts
             specs.precision = 6; // Default for general format
-            
-            // For values that are clearly meant to have decimal places, 
-            if (value > 0.001 && value < 1000000.0)
-            {
-                // Check if this looks like it has meaningful decimal places
-                double fractional_part = value - static_cast<long long>(value);
-                if (fractional_part > 0.0001)
-                {
-                    // This has significant fractional content, use higher precision
-                    specs.precision = 15; // Close to double precision
-                }
-            }
         }
     }
 
@@ -1219,7 +1234,7 @@ inline void to_string(double value, buffer &out, format_specs specs)
             }
         }
 
-        // Apply rounding based on precision
+        // Apply rounding based on precision, improved rounding
         double scale = 1.0;
         for (int i = 0; i < precision; ++i)
         {
@@ -1248,9 +1263,12 @@ inline void to_string(double value, buffer &out, format_specs specs)
             for (int i = 0; i < precision; ++i)
             {
                 frac_part *= 10;
-                int digit = static_cast<int>(frac_part);
+                int digit = static_cast<int>(frac_part + 0.5); // Better rounding
+                if (digit >= 10) {
+                    digit = 9; // Clamp to prevent overflow
+                }
                 out.push_back('0' + digit);
-                frac_part -= digit;
+                frac_part -= static_cast<int>(frac_part); // Remove integer part
             }
         }
 
@@ -1277,7 +1295,7 @@ inline void to_string(double value, buffer &out, format_specs specs)
     }
     else
     {
-        // Apply rounding to the entire number based on precision
+        // Fixed point formatting improved rounding
         double scale = 1.0;
         for (int i = 0; i < precision; ++i)
         {
@@ -1310,7 +1328,10 @@ inline void to_string(double value, buffer &out, format_specs specs)
             for (int i = 0; i < precision; ++i)
             {
                 frac_part *= 10;
-                int digit = static_cast<int>(frac_part);
+                int digit = static_cast<int>(frac_part + 0.0001); // Small epsilon for rounding
+                if (digit >= 10) {
+                    digit = 9; // Clamp to prevent overflow
+                }
                 out.push_back('0' + digit);
                 frac_part -= digit;
             }
