@@ -194,18 +194,18 @@ private:
 
 public:
     // Default constructor - adaptive mode with SBO
-    AFMT_CONSTEXPR buffer()
+    buffer()
         : data_(storage_), size_(0), capacity_(AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE),
           mode_(buffer_mode::internal_static), truncated_(false) {}
 
     // External buffer constructor
-    AFMT_CONSTEXPR buffer(char *ext_data, size_t ext_capacity)
+    buffer(char *ext_data, size_t ext_capacity)
         : data_(ext_data), size_(0), capacity_(ext_capacity),
           mode_(buffer_mode::external_static), truncated_(false) {}
 
     // External buffer constructor for C-style arrays
     template <size_t N_arr>
-    AFMT_CONSTEXPR buffer(char (&arr)[N_arr])
+    buffer(char (&arr)[N_arr])
         : data_(arr), size_(0), capacity_(N_arr),
           mode_(buffer_mode::external_static), truncated_(false) {}
 
