@@ -119,14 +119,23 @@ afmt::println("Padded: {:05d}", 123);    // "Padded: 00123"
 ```
 
 ### Floating-Point Types (`float`, `double`)
-- `f`/`F` - Fixed-point notation (default, precision defaults to 2)
-- `e`/`E` - Scientific notation
+- `g`/`G` - General format. Chooses the shorter of `f` or `e` representation. Default precision is 6 significant digits for explicit `{:g}`. Trailing zeros are removed from the fractional part, and the decimal point is removed if no digits follow. `G` uses `E` for scientific notation.
+- `f`/`F` - Fixed-point notation. Default precision is 2 digits after the decimal point.
+- `e`/`E` - Scientific notation. Default precision is 6 digits after the decimal point. `E` uses uppercase `E` for the exponent.
+
+**Note**: Default `{}` format preserves all meaningful digits (like C++20 std::format), while explicit `{:g}` uses 6 significant digits with general format rules.
 
 ```cpp
-afmt::println("Pi: {:.3f}", 3.14159);        // "Pi: 3.142"
-afmt::println("Default: {}", 3.14159);       // "Default: 3.14" (precision 2)
-afmt::println("Scientific: {:.2e}", 1234.5); // "Scientific: 1.23e+03"
-afmt::println("Scientific: {:.2E}", 1234.5); // "Scientific: 1.23E+03"
+afmt::println("Default ({}): {}", 123456.789);   // "Default ({}): 123456.789" (preserves digits)
+afmt::println("Explicit g: {:g}", 123456.789);  // "Explicit g: 123457" (6 sig digits)
+afmt::println("Default ({}): {}", 2.50464);     // "Default ({}): 2.50464" (preserves digits)
+afmt::println("Default ({}): {}", 0.0000123456); // "Default ({}): 1.23456e-05"
+afmt::println("Default ({}): {}", 12.0);         // "Default ({}): 12" (integer-like)
+
+afmt::println("Fixed: {:.2f}", 3.14159);        // "Fixed: 3.14"
+afmt::println("Scientific: {:.2e}", 1234.5);    // "Scientific: 1.23e+03"
+afmt::println("General specific: {:.3g}", 12345.6); // "General specific: 1.23e+04"
+afmt::println("General specific: {:.3G}", 12345.6); // "General specific: 1.23E+04"
 ```
 
 ### String Types (`const char*`, `string_view`)
@@ -192,21 +201,27 @@ afmt::println("Sign plus:   {:+d}", 42);      // "Sign plus:   +42"
 ### Floating-Point Formatting
 ```cpp
 double pi = 3.14159265359;
-afmt::println("Default:     {}", pi);         // "Default:     3.14"
-afmt::println("Precision:   {:.2f}", pi);     // "Precision:   3.14"
-afmt::println("High Prec:   {:.5f}", pi);     // "High Prec:   3.14159"
-afmt::println("Scientific:  {:.3e}", pi);     // "Scientific:  3.142e+00"
-afmt::println("Scientific:  {:.3E}", pi);     // "Scientific:  3.142E+00"
-afmt::println("Zero pad:    {:08.2f}", pi);   // "Zero pad:    00003.14"
-afmt::println("Plus sign:   {:+.2f}", pi);    // "Plus sign:   +3.14"
+afmt::println("Default ({}): {}", pi);         // "Default ({}): 3.14159265359" (preserves digits)
+afmt::println("Explicit g:   {:g}", pi);      // "Explicit g:   3.14159" (6 sig digits)
+afmt::println("Fixed:        {:.2f}", pi);    // "Fixed:        3.14"
+afmt::println("High Prec F:  {:.5f}", pi);    // "High Prec F:  3.14159"
+afmt::println("Scientific:   {:.3e}", pi);    // "Scientific:   3.142e+00"
+afmt::println("General:      {:.4g}", pi);    // "General:      3.142"
+afmt::println("General E:    {:.3G}", pi);    // "General E:    3.14E+00"
+afmt::println("Zero pad F:   {:08.2f}", pi);  // "Zero pad F:   00003.14"
+afmt::println("Plus sign F:  {:+.2f}", pi);   // "Plus sign F:  +3.14"
+
+// Integer-like values are formatted as integers
+afmt::println("Integer-like: {}", 12.0);      // "Integer-like: 12"
+afmt::println("Integer-like: {}", 123456.0);  // "Integer-like: 123456"
 
 // Large numbers with scientific notation
-afmt::println("Large:       {:.1e}", 1.0e20);    // "Large:       1.0e+20"
-afmt::println("Small:       {:.1e}", 1.0e-20);   // "Small:       1.0e-20"
+afmt::println("Large ({}):   {}", 1.0e20);    // "Large ({}):   1e+20"
+afmt::println("Small ({}):   {}", 1.0e-20);   // "Small ({}):   1e-20"
 
 // Special values
-afmt::println("Infinity:    {:.2e}", 1.0/0.0);   // "Infinity:    inf"
-afmt::println("NaN:         {:.2e}", 0.0/0.0);   // "NaN:         nan"
+afmt::println("Infinity:     {}", 1.0/0.0);   // "Infinity:     inf"
+afmt::println("NaN:          {}", 0.0/0.0);   // "NaN:          nan"
 ```
 
 ## Buffer Modes
@@ -421,7 +436,8 @@ The library uses lightweight error indicators:
 - Date/time formatting
 
 ### Current Implementation Limitations
-- General format specifier (`g`/`G`) not implemented for floating-point
+- General format specifier (`g`/`G`) uses basic shortest representation logic. Advanced algorithms like Dragonbox are not implemented.
+- Default `{}` format preserves meaningful digits to match std::format behavior, detecting integer-like values and formatting them without decimal points.
 - Hexadecimal floating-point format (`a`/`A`) not implemented
 - Character type specifier (`c`) for non-char types not implemented
 - Precision for string truncation not implemented
@@ -437,25 +453,10 @@ The library supports the following argument types:
 - String: `const char*`, `string_view`
 - Pointer: Any pointer type (formatted as hexadecimal)
 
-## Integration
-
-Add to your `platformio.ini`:
-```ini
-lib_deps = 
-    https://github.com/your-repo/Arduino-Utils.git
-```
-
-Include in your sketch:
-```cpp
-#include <format.h>
-using namespace afmt; // Optional: for shorter syntax
-```
-
 ## Compatibility
 
 - **Arduino**: All boards supported by Arduino framework
 - **Platform**: ESP32, ESP8266, AVR, STM32, etc.
-- **Compiler**: GCC 4.8+, Clang 3.4+
 - **C++ Standard**: C++11 or later
 
 ## Testing
@@ -469,6 +470,3 @@ The library includes comprehensive unit tests covering:
 - Scientific notation edge cases (infinity, NaN, large/small numbers)
 - Buffer truncation handling
 - Arduino String integration
-- Performance benchmarking
-
-Run tests with: `pio test -e your_target_environment`

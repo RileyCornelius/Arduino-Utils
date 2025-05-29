@@ -86,8 +86,9 @@ enum class presentation_type
     pointer = 3, // 'p'
 
     // Floating-point specifiers
-    exp = 1, // 'e' or 'E' //
-    fixed    // 'f' or 'F'
+    exp = 1,   // 'e' or 'E' //
+    fixed,     // 'f' or 'F'
+    general    // 'g' or 'G'
 };
 
 // Format specification options
@@ -718,6 +719,13 @@ inline const char *parse_format_specs(
             specs.set_type(presentation_type::fixed);
             specs.set_upper();
             break;
+        case 'g':
+            specs.set_type(presentation_type::general);
+            break;
+        case 'G':
+            specs.set_type(presentation_type::general);
+            specs.set_upper();
+            break;
         case 'c':
             specs.set_type(presentation_type::chr);
             break;
@@ -981,19 +989,23 @@ inline void to_string(double value, buffer &out, format_specs specs)
     // Handle special cases
     if (value != value)
     {
-        out.push_back('n');
-        out.push_back('a');
-        out.push_back('n');
+        out.append(specs.upper ? "NAN" : "nan", specs.upper ? "NAN" + 3 : "nan" + 3);
         return;
     }
 
     if (value == 0.0)
     {
         out.push_back('0');
-        int precision = specs.precision >= 0 ? specs.precision : 2; // Default precision for 0.0
-        if (precision > 0 && (specs.type == presentation_type::fixed ||
-                              specs.type == presentation_type::exp ||
-                              specs.type == presentation_type::none)) // Added none for default float
+        
+        // For general format, default precision is 6, but trailing zeros are removed
+        if (specs.type == presentation_type::general || specs.type == presentation_type::none)
+        {
+            // For {:g}, 0.0 is just "0"
+            return;
+        }
+        
+        int precision = specs.precision >= 0 ? specs.precision : (specs.type == presentation_type::general ? 6 : 2);
+        if (precision > 0 && (specs.type == presentation_type::fixed || specs.type == presentation_type::exp))
         {
             out.push_back('.');
             for (int i = 0; i < precision; ++i)
@@ -1012,9 +1024,8 @@ inline void to_string(double value, buffer &out, format_specs specs)
         return;
     }
 
-    // Handle infinity - use a more robust check
     // Check if value is infinite by comparing with known large finite values
-    const double max_finite = 1.7976931348623157e+308; // Approximate DBL_MAX
+    const double max_finite = 1.7976931348623157e+308;
     bool is_infinite = false;
 
     if (value > 0)
@@ -1063,12 +1074,131 @@ inline void to_string(double value, buffer &out, format_specs specs)
         out.push_back(' ');
     }
 
+    // Default type for float/double is general if 'none'
+    if (specs.type == presentation_type::none)
+    {
+        // For default {} format, use a different approach than explicit {:g}
+        // For small integers represented as doubles, show them as integers
+        if (value == static_cast<double>(static_cast<long long>(value)) && value < 1e15)
+        {
+            format_specs int_specs;
+            to_string(static_cast<long long>(value), out, int_specs);
+            return;
+        }
+        
+        // but doesn't show floating-point artifacts
+        specs.type = presentation_type::general;
+        
+        if (specs.precision == -1)
+        {
+            // Use a precision that captures the meaningful digits without artifacts
+            specs.precision = 6; // Default for general format
+            
+            // For values that are clearly meant to have decimal places, 
+            if (value > 0.001 && value < 1000000.0)
+            {
+                // Check if this looks like it has meaningful decimal places
+                double fractional_part = value - static_cast<long long>(value);
+                if (fractional_part > 0.0001)
+                {
+                    // This has significant fractional content, use higher precision
+                    specs.precision = 15; // Close to double precision
+                }
+            }
+        }
+    }
+
+    // Handle general format
+    if (specs.type == presentation_type::general)
+    {
+        int p = specs.precision >= 0 ? specs.precision : 6; // Default precision for explicit g is 6
+        if (p == 0) p = 1; // Precision 0 for g means 1 significant digit
+
+        // Calculate the exponent
+        int exp_val = 0;
+        if (value >= 1.0)
+        {
+            double temp = value;
+            while (temp >= 10.0)
+            {
+                temp /= 10.0;
+                exp_val++;
+            }
+        }
+        else if (value > 0.0)
+        {
+            double temp = value;
+            while (temp < 1.0)
+            {
+                temp *= 10.0;
+                exp_val--;
+            }
+        }
+
+        // Choose between fixed and scientific notation
+        bool use_scientific = (exp_val < -4 || exp_val >= p);
+
+        if (use_scientific)
+        {
+            // Use scientific notation with precision p-1
+            format_specs sci_specs = specs;
+            sci_specs.type = presentation_type::exp;
+            sci_specs.precision = p - 1;
+            to_string(value, out, sci_specs);
+        }
+        else
+        {
+            // Use fixed notation with precision p-1-exp_val
+            format_specs fixed_specs = specs;
+            fixed_specs.type = presentation_type::fixed;
+            fixed_specs.precision = p - 1 - exp_val;
+            if (fixed_specs.precision < 0) fixed_specs.precision = 0;
+            
+            // Format with fixed notation
+            buffer temp;
+            to_string(value, temp, fixed_specs);
+            
+            // Remove trailing zeros and decimal point if not needed
+            size_t len = temp.size();
+            const char* data = temp.data();
+            
+            // Find decimal point
+            size_t decimal_pos = len;
+            for (size_t i = 0; i < len; ++i)
+            {
+                if (data[i] == '.')
+                {
+                    decimal_pos = i;
+                    break;
+                }
+            }
+            
+            if (decimal_pos < len)
+            {
+                // Remove trailing zeros after decimal point
+                while (len > decimal_pos + 1 && data[len - 1] == '0')
+                {
+                    len--;
+                }
+                
+                // Remove decimal point if no fractional part remains
+                if (len == decimal_pos + 1)
+                {
+                    len--;
+                }
+            }
+            
+            // Copy the trimmed result
+            out.append(data, data + len);
+        }
+        return;
+    }
+
+    // Handle exp and fixed formatting
     int precision = specs.precision >= 0 ? specs.precision : 2;
 
-    // Format based on type (removed general notation handling)
     if (specs.type == presentation_type::exp)
     {
-        // Scientific notation implementation
         int exponent = 0;
 
         // Normalize the number to [1.0, 10.0)
@@ -1147,7 +1277,6 @@ inline void to_string(double value, buffer &out, format_specs specs)
     }
     else
     {
-        // Fixed point notation (default)
         // Apply rounding to the entire number based on precision
         double scale = 1.0;
         for (int i = 0; i < precision; ++i)
