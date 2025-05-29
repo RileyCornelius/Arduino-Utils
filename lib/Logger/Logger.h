@@ -28,8 +28,8 @@
 #define LOG_TIME_HHMMSSMS 3
 #define LOG_TIME_HHHHMMSSMS 4
 
-#define LOG_COLORS_DISABLE 0
-#define LOG_COLORS_ENABLE 1
+#define LOG_COLOR_DISABLE 0
+#define LOG_COLOR_ENABLE 1
 
 #define LOG_FILENAME_DISABLE 0
 #define LOG_FILENAME_ENABLE 1
@@ -60,8 +60,8 @@
 #define LOG_LEVEL_TEXT_FORMAT LOG_LEVEL_TEXT_FORMAT_SHORT
 #endif
 
-#ifndef LOG_COLORS
-#define LOG_COLORS LOG_COLORS_DISABLE
+#ifndef LOG_COLOR
+#define LOG_COLOR LOG_COLOR_DISABLE
 #endif
 
 #ifndef LOG_FILENAME
@@ -96,13 +96,16 @@ static_assert(LOG_TIME >= LOG_TIME_DISABLE && LOG_TIME <= LOG_TIME_HHHHMMSSMS, "
 static_assert(LOG_FILTER >= LOG_FILTER_DISABLE && LOG_FILTER <= LOG_FILTER_INCLUDE, "LOG_FILTER must be between LOG_FILTER_DISABLE and LOG_FILTER_INCLUDE");
 static_assert(LOG_PRINT_TYPE >= LOG_PRINT_TYPE_PRINTF || LOG_PRINT_TYPE <= LOG_PRINT_TYPE_FMT_FORMAT, "LOG_PRINT_TYPE must be either LOG_PRINT_TYPE_PRINTF, LOG_PRINT_TYPE_CUSTOM_FORMAT, LOG_PRINT_TYPE_STD_FORMAT or LOG_PRINT_TYPE_FMT_FORMAT");
 static_assert(LOG_FILENAME == LOG_FILENAME_DISABLE || LOG_FILENAME == LOG_FILENAME_ENABLE, "LOG_FILENAME must be either LOG_FILENAME_DISABLE or LOG_FILENAME_ENABLE");
-static_assert(LOG_COLORS == LOG_COLORS_DISABLE || LOG_COLORS == LOG_COLORS_ENABLE, "LOG_COLORS must be either LOG_COLORS_DISABLE or LOG_COLORS_ENABLE");
-
-#include <format.h>
+static_assert(LOG_COLOR == LOG_COLOR_DISABLE || LOG_COLOR == LOG_COLOR_ENABLE, "LOG_COLOR must be either LOG_COLOR_DISABLE or LOG_COLOR_ENABLE");
 
 /**--------------------------------------------------------------------------------------
  * Logger Private Functions
  *-------------------------------------------------------------------------------------*/
+
+#if LOG_LEVEL > LOG_LEVEL_DISABLE && LOG_PRINT_TYPE == LOG_PRINT_TYPE_CUSTOM_FORMAT
+#include <format.h>
+#endif
+
 namespace _logger
 {
 #if LOG_LEVEL > LOG_LEVEL_DISABLE && LOG_PRINT_TYPE == LOG_PRINT_TYPE_CUSTOM_FORMAT
@@ -141,7 +144,7 @@ namespace _logger
 
 // Colors
 
-#if LOG_COLORS == LOG_COLORS_ENABLE
+#if LOG_COLOR == LOG_COLOR_ENABLE
 #define _LOG_COLOR_BLACK "30"
 #define _LOG_COLOR_BRIGHT_RED "91" // ERROR
 #define _LOG_COLOR_RED "31"
@@ -167,7 +170,7 @@ namespace _logger
 #define _LOG_COLOR_D ""
 #define _LOG_COLOR_V ""
 #define _LOG_RESET_COLOR ""
-#endif // LOG_COLORS == LOG_COLORS_ENABLE
+#endif // LOG_COLOR == LOG_COLOR_ENABLE
 
 // Filter
 

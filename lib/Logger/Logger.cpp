@@ -122,7 +122,7 @@ namespace _logger
         }
 
         char buff[256];
-#if LOG_COLORS == LOG_COLORS_ENABLE
+#if LOG_COLOR == LOG_COLOR_ENABLE
         snprintf(buff, sizeof(buff), _LOG_COLOR_E "[ASSERT] %s:%d - %s(): (%s) => %s" _LOG_RESET_COLOR, file, line, func, expr, message);
 #else
         snprintf(buff, sizeof(buff), "[ASSERT] %s:%d - %s(): (%s) => %s", file, line, func, expr, message);
