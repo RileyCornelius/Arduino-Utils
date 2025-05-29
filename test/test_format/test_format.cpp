@@ -4,7 +4,12 @@
 #include <unity.h>
 #include <Arduino.h>
 #include <format.h>
-#include <log.h>
+
+#define HAS_CPP20 __cplusplus >= 202002L
+// cpp20
+#if HAS_CPP20
+#include <format>
+#endif
 
 /*------------------------------------------------------------------------------
  * TESTS FOR format_to (fixed array)
@@ -78,7 +83,7 @@ void test_format_to_floats()
 
 	// Default precision
 	afmt::format_to(buffer, "Value: {}", 2.50464);
-	TEST_ASSERT_EQUAL_STRING_MESSAGE("Value: 2.50", buffer, "Float default precision");
+	TEST_ASSERT_EQUAL_STRING_MESSAGE("Value: 2.50464", buffer, "Float default precision");
 
 	// Zero precision
 	afmt::format_to(buffer, "Int: {:.0f}", 3.7);
@@ -173,6 +178,75 @@ void test_format_to_scientific_notation()
 	// Test numbers that normalize to 10.0 (should become 1.0e+01)
 	afmt::format_to(buffer, "Ten: {:.1e}", 9.99999);
 	TEST_ASSERT_EQUAL_STRING_MESSAGE("Ten: 1.0e+01", buffer, "Scientific rounding to 10");
+}
+
+void test_format_to_general_notation()
+{
+    char buffer[50];
+    double f1 = 123456.789;
+    double f2 = 0.0000123456;
+    double f3 = 1.23;
+    double f4 = 1234567890.0;
+    double f5 = 12.0;
+    double f6 = 123456.0;
+
+    // Default {}
+    afmt::format_to(buffer, "{}", f1); 
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("123456.789", buffer, "f1 {} default (preserves digits)");
+
+    // Explicit {:g} uses 6 significant digits
+    afmt::format_to(buffer, "{:g}", f1);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("123457", buffer, "f1 {:g}");
+
+    afmt::format_to(buffer, "{:g}", f2);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("1.23456e-05", buffer, "f2 {:g}");
+
+    afmt::format_to(buffer, "{:g}", f3);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("1.23", buffer, "f3 {:g}");
+
+    afmt::format_to(buffer, "{:g}", f4);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("1.23457e+09", buffer, "f4 {:g}");
+
+    afmt::format_to(buffer, "{:g}", f5);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("12", buffer, "f5 {:g}");
+
+    afmt::format_to(buffer, "{:g}", f6);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("123456", buffer, "f6 {:g}");
+
+    // Test the problematic values
+    afmt::format_to(buffer, "{}", 2.50464);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("2.50464", buffer, "2.50464 default format");
+
+    afmt::format_to(buffer, "{}", 3.14159);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("3.14159", buffer, "3.14159 default format");
+
+    // Test integer-like values
+    afmt::format_to(buffer, "{}", f5);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("12", buffer, "f5 {} default (integer-like)");
+
+    afmt::format_to(buffer, "{}", f6);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("123456", buffer, "f6 {} default (integer-like)");
+
+    // Specific Precision {:.3g}
+    afmt::format_to(buffer, "{:.3g}", f1);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("1.23e+05", buffer, "f1 {:.3g}");
+
+    afmt::format_to(buffer, "{:.3g}", f2);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("1.23e-05", buffer, "f2 {:.3g}");
+
+    afmt::format_to(buffer, "{:.3g}", f3);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("1.23", buffer, "f3 {:.3g}");
+    
+    afmt::format_to(buffer, "{:.3g}", f6);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("1.23e+05", buffer, "f6 {:.3g}");
+    
+    // Test uppercase G
+    afmt::format_to(buffer, "{:.3G}", f1);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("1.23E+05", buffer, "f1 {:.3G}");
+
+    // Test special values with general format
+    afmt::format_to(buffer, "{:g}", 0.0);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE("0", buffer, "zero {:g}");
 }
 
 void test_format_to_scientific_edge_cases()
@@ -309,11 +383,11 @@ void test_unmatched_braces()
 	TEST_ASSERT_EQUAL_STRING_MESSAGE("Unmatched }", buffer, "Unmatched closing brace");
 }
 
-#if AFMT_HAS_ARDUINO
 /*------------------------------------------------------------------------------
- * TESTS FOR Arduino String functions
- *----------------------------------------------------------------------------*/
+* TESTS FOR Arduino String functions
+*----------------------------------------------------------------------------*/
 
+#if AFMT_HAS_ARDUINO
 void test_aformat()
 {
 	String result = afmt::aformat("Hello, {}!", "Arduino");
@@ -347,6 +421,221 @@ void test_performance_basic()
 }
 
 /*------------------------------------------------------------------------------
+ * COMPATIBILITY TESTS WITH STD::FORMAT (C++20)
+ *----------------------------------------------------------------------------*/
+
+#if HAS_CPP20
+void test_compare_basic_formatting()
+{
+    // Test basic string formatting
+    std::string afmt_result = afmt::format("Hello, {}!", "world");
+    std::string std_result = std::format("Hello, {}!", "world");
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Basic string comparison");
+    
+    // Test integer formatting
+    afmt_result = afmt::format("Number: {}", 42);
+    std_result = std::format("Number: {}", 42);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Integer comparison");
+    
+    // Test negative integer
+    afmt_result = afmt::format("Negative: {}", -123);
+    std_result = std::format("Negative: {}", -123);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Negative integer comparison");
+}
+
+void test_compare_hex_formatting()
+{
+    // Lowercase hex
+    std::string afmt_result = afmt::format("{:x}", 255);
+    std::string std_result = std::format("{:x}", 255);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Lowercase hex comparison");
+    
+    // Uppercase hex
+    afmt_result = afmt::format("{:X}", 255);
+    std_result = std::format("{:X}", 255);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Uppercase hex comparison");
+    
+    // Hex with prefix
+    afmt_result = afmt::format("{:#x}", 255);
+    std_result = std::format("{:#x}", 255);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Hex with prefix comparison");
+}
+
+void test_compare_binary_octal()
+{
+    // Binary
+    std::string afmt_result = afmt::format("{:b}", 5);
+    std::string std_result = std::format("{:b}", 5);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Binary comparison");
+    
+    // Binary with prefix
+    afmt_result = afmt::format("{:#b}", 5);
+    std_result = std::format("{:#b}", 5);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Binary with prefix comparison");
+    
+    // Octal
+    afmt_result = afmt::format("{:o}", 64);
+    std_result = std::format("{:o}", 64);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Octal comparison");
+}
+
+void test_compare_float_formatting()
+{
+    // Default float formatting (should be general)
+    std::string afmt_result = afmt::format("{}", 3.1415);
+    std::string std_result = std::format("{}", 3.1415);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Default float comparison");
+    
+    // Fixed point
+    afmt_result = afmt::format("{:.2f}", 3.14159);
+    std_result = std::format("{:.2f}", 3.14159);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Fixed point comparison");
+    
+    // Scientific notation
+    afmt_result = afmt::format("{:.2e}", 1234.5);
+    std_result = std::format("{:.2e}", 1234.5);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Scientific notation comparison");
+}
+
+void test_compare_general_formatting()
+{
+    // Test the examples from the original prompt
+    double f1 = 123456.789;
+    double f2 = 0.0000123456;
+    double f3 = 1.23;
+    double f4 = 1234567890.0;
+    double f5 = 12.0;
+    double f6 = 123456.0;
+    
+    // Default {}
+    std::string afmt_result = afmt::format("{}", f1);
+    std::string std_result = std::format("{}", f1);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "f1 {} comparison");
+    
+    afmt_result = afmt::format("{:g}", f2);
+    std_result = std::format("{:g}", f2);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "f2 {:g} comparison");
+    
+    afmt_result = afmt::format("{:g}", f3);
+    std_result = std::format("{:g}", f3);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "f3 {:g} comparison");
+
+    afmt_result = afmt::format("{:g}", f4);
+    std_result = std::format("{:g}", f4);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "f4 {:g} comparison");
+
+    afmt_result = afmt::format("{}", f5);
+    std_result = std::format("{}", f5);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "f5 {} comparison");
+    
+    // Specific precision
+    afmt_result = afmt::format("{:.3g}", f1);
+    std_result = std::format("{:.3g}", f1);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "f1 {:.3g} comparison");
+    
+    afmt_result = afmt::format("{:.3g}", f3);
+    std_result = std::format("{:.3g}", f3);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "f3 {:.3g} comparison");
+}
+
+void test_compare_alignment_padding()
+{
+    // Right alignment
+    std::string afmt_result = afmt::format("'{:5}'", 42);
+    std::string std_result = std::format("'{:5}'", 42);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Right alignment comparison");
+    
+    // Left alignment
+    afmt_result = afmt::format("'{:<5}'", 42);
+    std_result = std::format("'{:<5}'", 42);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Left alignment comparison");
+    
+    // Center alignment
+    afmt_result = afmt::format("'{:^5}'", 42);
+    std_result = std::format("'{:^5}'", 42);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Center alignment comparison");
+    
+    // Zero padding
+    afmt_result = afmt::format("{:05}", 42);
+    std_result = std::format("{:05}", 42);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Zero padding comparison");
+}
+
+void test_compare_sign_formatting()
+{
+    // Plus sign
+    std::string afmt_result = afmt::format("{:+}", 42);
+    std::string std_result = std::format("{:+}", 42);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Plus sign comparison");
+    
+    // Space sign
+    afmt_result = afmt::format("{: }", 42);
+    std_result = std::format("{: }", 42);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Space sign comparison");
+    
+    // Negative with zero padding
+    afmt_result = afmt::format("{:05}", -42);
+    std_result = std::format("{:05}", -42);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Negative zero padding comparison");
+}
+
+void test_compare_boolean_formatting()
+{
+    // Default boolean
+    std::string afmt_result = afmt::format("{}", true);
+    std::string std_result = std::format("{}", true);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Boolean true comparison");
+    
+    afmt_result = afmt::format("{}", false);
+    std_result = std::format("{}", false);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Boolean false comparison");
+    
+    // Numeric boolean
+    afmt_result = afmt::format("{:d}", true);
+    std_result = std::format("{:d}", true);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Boolean numeric true comparison");
+    
+    afmt_result = afmt::format("{:d}", false);
+    std_result = std::format("{:d}", false);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Boolean numeric false comparison");
+}
+
+void test_compare_special_float_values()
+{
+    // Infinity
+    double inf = 1.0 / 0.0;
+    std::string afmt_result = afmt::format("{}", inf);
+    std::string std_result = std::format("{}", inf);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Infinity comparison");
+    
+    // Negative infinity
+    double neg_inf = -1.0 / 0.0;
+    afmt_result = afmt::format("{}", neg_inf);
+    std_result = std::format("{}", neg_inf);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Negative infinity comparison");
+    
+    // NaN
+    double nan_val = 0.0 / 0.0;
+    afmt_result = afmt::format("{}", nan_val);
+    std_result = std::format("{}", nan_val);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "NaN comparison");
+}
+
+void test_compare_complex_formatting()
+{
+    // Multiple arguments
+    std::string afmt_result = afmt::format("User: {}, ID: {:04}, Score: {:.1f}%", "Alice", 123, 87.6);
+    std::string std_result = std::format("User: {}, ID: {:04}, Score: {:.1f}%", "Alice", 123, 87.6);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Complex formatting comparison");
+    
+    // Mixed types with alignment
+    afmt_result = afmt::format("{:<10} {:>5} {:^8.2f}", "test", 42, 3.14);
+    std_result = std::format("{:<10} {:>5} {:^8.2f}", "test", 42, 3.14);
+    TEST_ASSERT_EQUAL_STRING_MESSAGE(std_result.c_str(), afmt_result.c_str(), "Mixed alignment comparison");
+}
+#endif // HAS_CPP20
+
+/*------------------------------------------------------------------------------
  * SETUP AND TEST RUNNER
  *----------------------------------------------------------------------------*/
 
@@ -374,6 +663,7 @@ void tests()
 	RUN_TEST(test_format_to_alignment);
 	RUN_TEST(test_format_to_zero_padding);
 	RUN_TEST(test_format_to_scientific_notation);
+	RUN_TEST(test_format_to_general_notation);
 	RUN_TEST(test_format_to_scientific_edge_cases);
 
 	// format_to_n tests
@@ -404,6 +694,20 @@ void tests()
 
 	// Performance
 	RUN_TEST(test_performance_basic);
+
+#if HAS_CPP20
+	// Compatibility tests with std::format (C++20)
+	RUN_TEST(test_compare_basic_formatting);
+	RUN_TEST(test_compare_hex_formatting);
+	RUN_TEST(test_compare_binary_octal);
+	RUN_TEST(test_compare_float_formatting);
+	RUN_TEST(test_compare_general_formatting);
+	RUN_TEST(test_compare_alignment_padding);
+	RUN_TEST(test_compare_sign_formatting);
+	RUN_TEST(test_compare_boolean_formatting);
+	RUN_TEST(test_compare_special_float_values);
+	RUN_TEST(test_compare_complex_formatting);
+#endif
 }
 
 void setup()

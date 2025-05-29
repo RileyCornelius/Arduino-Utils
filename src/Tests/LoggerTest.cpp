@@ -38,34 +38,33 @@ void loggerLoop()
     int value = rand() / 10000;
     int small_value = value / 10003;
     int neg_value = -value / 105;
-    float pi = 3.14159f;
+    float pi = 3.1415f;
     const char *text = "Hello";
     int *intPtr = &i;
     int hex = 0x45;
 
-    
-    constexpr const char *format = "{:#x} {:<5} {:.2f} {} {} {} {:.5f} \n";
+    constexpr const char *format = "hex:{:#x} shift:{:<5} pi:{} precision:{:.6} neg:{} float precision:{:.5f} \n";
 
     Serial.println();
 
     // BENCHMARK_MICROS_BEGIN(ardfmt_toPrint);
     // char tesBuffer[64];
-    // afmt::format_to(tesBuffer, format, hex, "str", pi, f, neg_value, small_value, f);
+    // afmt::format_to(tesBuffer, format, hex, "str", pi, f, neg_value,  f);
     // BENCHMARK_MICROS_END(ardfmt_toPrint)
     // Serial.print(tesBuffer);
 
     BENCHMARK_MICROS_BEGIN(ardfmtPrint);
-    std::string afmtString = afmt::format(format, hex, "str", pi, f, neg_value, small_value, f);
+    std::string afmtString = afmt::format(format, hex, "str", pi, f, neg_value, f);
     BENCHMARK_MICROS_END(ardfmtPrint)
     Serial.print(afmtString.c_str());
     
     BENCHMARK_MICROS_BEGIN(fmtPrint);
-    std::string fmtString = fmt::format(format, hex, "str", pi, f, neg_value, small_value, f);
+    std::string fmtString = fmt::format(format, hex, "str", pi, f, neg_value,  f);
     BENCHMARK_MICROS_END(fmtPrint);
     Serial.print(fmtString.c_str());
     
     BENCHMARK_MICROS_BEGIN(stdFormat);
-    std::string fom = std::format(format, hex, "str", pi, f, neg_value, small_value, f);
+    std::string fom = std::format(format, hex, "str", pi, f, neg_value, f);
     BENCHMARK_MICROS_END(stdFormat);
     Serial.print(fom.c_str());
     
