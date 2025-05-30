@@ -90,7 +90,6 @@ namespace _logger
     }
 #endif // LOG_LOG_FILTER != LOG_FILTER_DISABLE
 
-#if LOG_FILENAME == LOG_FILENAME_ENABLE
     const char *filepathToName(const char *path)
     {
         size_t i = 0;
@@ -112,7 +111,6 @@ namespace _logger
         }
         return path + pos;
     }
-#endif // LOG_FILENAME == LOG_FILENAME_ENABLE
 
     void assertion(bool condition, const char *file, int line, const char *func, const char *expr, const char *message)
     {

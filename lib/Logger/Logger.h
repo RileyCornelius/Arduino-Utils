@@ -131,10 +131,7 @@ namespace _logger
     bool logFilter(const char *tag);
 #endif
 
-#if LOG_FILENAME == LOG_FILENAME_ENABLE
     const char *filepathToName(const char *path);
-#endif
-
     void assertion(bool flag, const char *file, int line, const char *func, const char *expr, const char *message = "");
 }
 
