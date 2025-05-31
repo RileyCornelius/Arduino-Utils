@@ -45,7 +45,7 @@ LOG_ERROR("SD_CARD", "Failed to write file: %s", filename);
 
 ## Configuration Options
 
-Configure the logger by defining macros before including `Logger.h`:
+Configure the logger by defining macros before including `logger.h`:
 
 `log.h` provides a flexible configuration system to tailor the logging behavior to your needs. Below are the available configuration options:
 
@@ -170,7 +170,7 @@ Specify the output stream (Serial, Serial1, etc.).
 #define LOG_STATIC_BUFFER_SIZE 128
 #define LOG_PRINT_TYPE LOG_PRINT_TYPE_FMT_FORMAT  // Use modern formatting
 
-#include <Logger.h>
+#include <logger.h>
 ```
 
 ## Logging Macros
