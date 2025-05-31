@@ -38,4 +38,21 @@ public:
 
     T &operator[](uint32_t index) { return at(index); }
     const T &operator[](uint32_t index) const { return at(index); }
+
+    T *begin() { return array; }
+    const T *begin() const { return array; }
+    T *end() { return array + length; }
+    const T *end() const { return array + length; }
+    const T *cbegin() const { return array; }
+    const T *cend() const { return array + length; }
+
+    bool empty() const { return length == 0; }
+
+    void fill(const T &value)
+    {
+        for (uint32_t i = 0; i < length; ++i)
+        {
+            array[i] = value;
+        }
+    }
 };
