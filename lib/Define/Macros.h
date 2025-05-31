@@ -12,3 +12,8 @@
 // Join two symbols together
 #define CONCAT(x, y) I_CONCAT(x, y)
 #define I_CONCAT(x, y) x##y
+// Turn symbol into string
+#ifndef STRINGIFY
+#define STRINGIFY_1(...) #__VA_ARGS__
+#define STRINGIFY(...) STRINGIFY_1(__VA_ARGS__)
+#endif
