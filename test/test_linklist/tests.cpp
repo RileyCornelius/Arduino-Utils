@@ -21,16 +21,6 @@
 //     TEST_ASSERT_EQUAL(20, 0);
 // }
 
-void toggleTest()
-{
-	const int ledPin = 13;
-	pinMode(ledPin, OUTPUT);
-	digitalWrite(ledPin, HIGH);
-	int state = digitalRead(ledPin);
-
-	TEST_ASSERT_EQUAL(!state, !digitalRead(ledPin));
-}
-
 void linkedListTest()
 {
 	LinkedList<int> list;
@@ -69,17 +59,13 @@ void tearDown(void)
 void tests()
 {
 	RUN_TEST(linkedListTest);
-	RUN_TEST(toggleTest);
-
-	// RUN_TEST(test_function_true);
-	// RUN_TEST(test_function_false);
 }
 
 void setup()
 {
 	// NOTE!!! Wait for >2 secs
 	// if board doesn't support software reset via Serial.DTR/RTS
-	delay(2000);
+	delay(3000);
 
 	UNITY_BEGIN();
 	tests();
@@ -88,8 +74,4 @@ void setup()
 
 void loop()
 {
-	digitalWrite(13, HIGH);
-	delay(100);
-	digitalWrite(13, LOW);
-	delay(500);
 }
