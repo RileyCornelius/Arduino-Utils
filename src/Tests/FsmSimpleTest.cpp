@@ -3,6 +3,9 @@
 
 #include "SimpleFsm.h"
 
+// Check for C++17 support (required for designated initializers)
+#if __cplusplus >= 201703L
+
 // ----------------
 // Basic Example Usage:
 // ----------------
@@ -101,3 +104,4 @@ void fsmSimpleLoop()
 
     delay(1000);
 }
+#endif

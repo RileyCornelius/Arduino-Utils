@@ -14,18 +14,20 @@
 
 #include "log.h"
 #include "format.h"
-#include "DebugLog.h"
+// #include "DebugLog.h"
 
 #include <format>
 #include "fmt.h"
-// #include "simple_fmt.h"
-// #include "arduino_fmt.h"
 
 static const char *TAG = "LOG";
 
 void loggerSetup()
 {
-    Serial.begin(115200);
+    LOG_BEGIN(115200);
+
+    LOG_I("{}", 42);
+
+    // ASSERT(1 == 1, "This is a test assertion");
 }
 
 void loggerLoop()
@@ -38,7 +40,7 @@ void loggerLoop()
     int value = rand() / 10000;
     int small_value = value / 10003;
     int neg_value = -value / 105;
-    float pi = 3.1415f;
+    float pi = 3.14159f;
     const char *text = "Hello";
     int *intPtr = &i;
     int hex = 0x45;
@@ -47,27 +49,37 @@ void loggerLoop()
 
     Serial.println();
 
+    BENCHMARK_MICROS_BEGIN(basic_format_to);
+    fmt::basic_memory_buffer<char, LOG_STATIC_BUFFER_SIZE> buffer;
+    fmt::format_to(std::back_inserter(buffer), format, hex, "str", pi, f, neg_value, f);
+    buffer.push_back('\0');
+    BENCHMARK_MICROS_END(basic_format_to);
+    LOG_OUTPUT.print(buffer.data());
+
     // BENCHMARK_MICROS_BEGIN(ardfmt_toPrint);
     // char tesBuffer[64];
     // afmt::format_to(tesBuffer, format, hex, "str", pi, f, neg_value,  f);
     // BENCHMARK_MICROS_END(ardfmt_toPrint)
     // Serial.print(tesBuffer);
 
-    BENCHMARK_MICROS_BEGIN(ardfmtPrint);
-    std::string afmtString = afmt::format(format, hex, "str", pi, f, neg_value, f);
-    BENCHMARK_MICROS_END(ardfmtPrint)
-    Serial.print(afmtString.c_str());
-    
-    BENCHMARK_MICROS_BEGIN(fmtPrint);
-    std::string fmtString = fmt::format(format, hex, "str", pi, f, neg_value,  f);
-    BENCHMARK_MICROS_END(fmtPrint);
-    Serial.print(fmtString.c_str());
-    
     BENCHMARK_MICROS_BEGIN(stdFormat);
     std::string fom = std::format(format, hex, "str", pi, f, neg_value, f);
     BENCHMARK_MICROS_END(stdFormat);
     Serial.print(fom.c_str());
-    
+
+    BENCHMARK_MICROS_BEGIN(log_i_fmt);
+    LOG_I("hex:{:#x} shift:{:<5} pi:{} precision:{:.6} neg:{} float precision:{:.5f}", hex, "str", pi, f, neg_value, f);
+    BENCHMARK_MICROS_END(log_i_fmt);
+
+    BENCHMARK_MICROS_BEGIN(ardfmtPrint);
+    std::string afmtString = afmt::format(format, hex, "str", pi, f, neg_value, f);
+    BENCHMARK_MICROS_END(ardfmtPrint)
+    Serial.print(afmtString.c_str());
+
+    // BENCHMARK_MICROS_BEGIN(fmtPrint);
+    // std::string fmtString = fmt::format(format, hex, "str", pi, f, neg_value,  f);
+    // BENCHMARK_MICROS_END(fmtPrint);
+    // Serial.print(fmtString.c_str());
 
     // BENCHMARK_MICROS_BEGIN(fmt_toPrint);
     // // Serial.print(fmt::format(format, hex, "str", i, f, neg_value, 4).c_str());

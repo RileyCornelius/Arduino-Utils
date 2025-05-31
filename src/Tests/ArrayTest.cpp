@@ -1,4 +1,7 @@
-#include <Array.h>
+#include <array>
+#include <etl/array.h>
+#include "Array.h"
+#include "log.h"
 
 void outOfBounds()
 {
@@ -23,18 +26,30 @@ Array<int> createArray()
 
 // ============================================================================= //
 
+// #include "fmt/ranges.h"
 void arraySetup()
 {
-    int intArrayData[] = {1, 2, 3, 4, 5};
-    Array<int> intArray = Array<int>(intArrayData);
-    Serial.println(intArray.size());
+    // int intArrayData[] = {1, 2, 3, 4, 5};
+    // Array<int> intArray = Array<int>(intArrayData);
+    // Serial.println(intArray.size());
 
     // Array<int> intArray2 = createArray();
     // outOfBounds();
+
+    std::array std = {1, 2, 3, 4, 5};
+    etl::array etl = {1, 2, 3, 4, 5};
+
+    etl.insert(etl.begin() + 2, 99);
+    LOG_I("etl size: {}", etl.size());
+    // LOG_I("etl array: [{}]", fmt::join(etl, ", "));
+
+    std[2] = 99;
+    LOG_D("std size: {}", std.size());
+    // LOG_D("std array: {}", std)
 }
 void arrayLoop()
 {
-    uint32_t uintArray[] = {1, 2, 3};
-    passArray(uintArray);
-    delay(5000);
+    // uint32_t uintArray[] = {1, 2, 3};
+    // passArray(uintArray);
+    // delay(5000);
 }
