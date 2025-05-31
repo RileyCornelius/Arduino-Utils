@@ -86,9 +86,9 @@ enum class presentation_type
     pointer = 3, // 'p'
 
     // Floating-point specifiers
-    exp = 1,   // 'e' or 'E' //
-    fixed,     // 'f' or 'F'
-    general    // 'g' or 'G'
+    exp = 1, // 'e' or 'E' //
+    fixed,   // 'f' or 'F'
+    general  // 'g' or 'G'
 };
 
 // Format specification options
@@ -996,14 +996,14 @@ inline void to_string(double value, buffer &out, format_specs specs)
     if (value == 0.0)
     {
         out.push_back('0');
-        
+
         // For general format, default precision is 6, but trailing zeros are removed
         if (specs.type == presentation_type::general || specs.type == presentation_type::none)
         {
             // For {:g}, 0.0 is just "0"
             return;
         }
-        
+
         int precision = specs.precision >= 0 ? specs.precision : (specs.type == presentation_type::general ? 6 : 2);
         if (precision > 0 && (specs.type == presentation_type::fixed || specs.type == presentation_type::exp))
         {
@@ -1085,7 +1085,7 @@ inline void to_string(double value, buffer &out, format_specs specs)
             to_string(static_cast<long long>(value), out, int_specs);
             return;
         }
-        
+
         // Use general format with smart precision that removes trailing zeros
         specs.type = presentation_type::general;
         specs.precision = 6; // Default general precision
@@ -1095,7 +1095,8 @@ inline void to_string(double value, buffer &out, format_specs specs)
     if (specs.type == presentation_type::general)
     {
         int p = specs.precision >= 0 ? specs.precision : 6; // Default precision for explicit g is 6
-        if (p == 0) p = 1; // Precision 0 for g means 1 significant digit
+        if (p == 0)
+            p = 1; // Precision 0 for g means 1 significant digit
 
         // Calculate the exponent
         int exp_val = 0;
@@ -1135,16 +1136,17 @@ inline void to_string(double value, buffer &out, format_specs specs)
             format_specs fixed_specs = specs;
             fixed_specs.type = presentation_type::fixed;
             fixed_specs.precision = p - 1 - exp_val;
-            if (fixed_specs.precision < 0) fixed_specs.precision = 0;
-            
+            if (fixed_specs.precision < 0)
+                fixed_specs.precision = 0;
+
             // Format with fixed notation
             buffer temp;
             to_string(value, temp, fixed_specs);
-            
+
             // Remove trailing zeros and decimal point if not needed
             size_t len = temp.size();
-            const char* data = temp.data();
-            
+            const char *data = temp.data();
+
             // Find decimal point
             size_t decimal_pos = len;
             for (size_t i = 0; i < len; ++i)
@@ -1155,7 +1157,7 @@ inline void to_string(double value, buffer &out, format_specs specs)
                     break;
                 }
             }
-            
+
             if (decimal_pos < len)
             {
                 // Remove trailing zeros after decimal point
@@ -1163,14 +1165,14 @@ inline void to_string(double value, buffer &out, format_specs specs)
                 {
                     len--;
                 }
-                
+
                 // Remove decimal point if no fractional part remains
                 if (len == decimal_pos + 1)
                 {
                     len--;
                 }
             }
-            
+
             // Copy the trimmed result
             out.append(data, data + len);
         }
@@ -1235,7 +1237,8 @@ inline void to_string(double value, buffer &out, format_specs specs)
             {
                 frac_part *= 10;
                 int digit = static_cast<int>(frac_part + 0.00001); // Small epsilon for consistency
-                if (digit > 9) digit = 9; // Clamp to prevent overflow
+                if (digit > 9)
+                    digit = 9; // Clamp to prevent overflow
                 out.push_back('0' + digit);
                 frac_part -= digit;
             }
@@ -1301,7 +1304,8 @@ inline void to_string(double value, buffer &out, format_specs specs)
             {
                 frac_part *= 10;
                 int digit = static_cast<int>(frac_part + 0.00001); // Small epsilon for consistency
-                if (digit > 9) digit = 9; // Clamp to prevent overflow
+                if (digit > 9)
+                    digit = 9; // Clamp to prevent overflow
                 out.push_back('0' + digit);
                 frac_part -= digit;
             }

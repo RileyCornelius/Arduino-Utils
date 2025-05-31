@@ -49,7 +49,7 @@
  *-------------------------------------------------------------------------------------*/
 
 #ifndef LOG_LEVEL
-#define LOG_LEVEL LOG_LEVEL_DEBUG // If LOG_LEVEL is not defined by the user, it defaults to LOG_LEVEL_DEBUG
+#define LOG_LEVEL LOG_LEVEL_DEBUG // Defaults LOG_LEVEL_DEBUG
 #endif
 
 #ifndef LOG_TIME
@@ -76,6 +76,10 @@
 #define LOG_FILTER_LIST {""}
 #endif
 
+#ifndef LOG_STATIC_BUFFER_SIZE
+#define LOG_STATIC_BUFFER_SIZE 64
+#endif
+
 #ifndef LOG_PRINT_TYPE
 #define LOG_PRINT_TYPE LOG_PRINT_TYPE_PRINTF
 #endif
@@ -84,7 +88,9 @@
 #define LOG_OUTPUT Serial
 #endif
 
+#ifndef LOG_EOL
 #define LOG_EOL "\r\n"
+#endif
 
 /**--------------------------------------------------------------------------------------
  * Logger Settings Check
@@ -97,27 +103,14 @@ static_assert(LOG_FILTER >= LOG_FILTER_DISABLE && LOG_FILTER <= LOG_FILTER_INCLU
 static_assert(LOG_PRINT_TYPE >= LOG_PRINT_TYPE_PRINTF || LOG_PRINT_TYPE <= LOG_PRINT_TYPE_FMT_FORMAT, "LOG_PRINT_TYPE must be either LOG_PRINT_TYPE_PRINTF, LOG_PRINT_TYPE_CUSTOM_FORMAT, LOG_PRINT_TYPE_STD_FORMAT or LOG_PRINT_TYPE_FMT_FORMAT");
 static_assert(LOG_FILENAME == LOG_FILENAME_DISABLE || LOG_FILENAME == LOG_FILENAME_ENABLE, "LOG_FILENAME must be either LOG_FILENAME_DISABLE or LOG_FILENAME_ENABLE");
 static_assert(LOG_COLOR == LOG_COLOR_DISABLE || LOG_COLOR == LOG_COLOR_ENABLE, "LOG_COLOR must be either LOG_COLOR_DISABLE or LOG_COLOR_ENABLE");
+static_assert(LOG_STATIC_BUFFER_SIZE > 0, "LOG_STATIC_BUFFER_SIZE must be greater than 0");
 
 /**--------------------------------------------------------------------------------------
  * Logger Private Functions
  *-------------------------------------------------------------------------------------*/
 
-#if LOG_LEVEL > LOG_LEVEL_DISABLE && LOG_PRINT_TYPE == LOG_PRINT_TYPE_CUSTOM_FORMAT
-#include <format.h>
-#endif
-
 namespace _logger
 {
-#if LOG_LEVEL > LOG_LEVEL_DISABLE && LOG_PRINT_TYPE == LOG_PRINT_TYPE_CUSTOM_FORMAT
-    template <typename... Args>
-    void print(const char *format, const Args &...args)
-    {
-        afmt::buffer buf;
-        afmt::format_to(buf, format, args...);
-        LOG_OUTPUT.print(buf.c_str());
-    }
-#endif
-
 #if LOG_LEVEL > LOG_LEVEL_DISABLE && LOG_PRINT_TYPE == LOG_PRINT_TYPE_PRINTF
     void vprintf(const char *format, va_list arg);
     void printf(const char *format, ...);
@@ -131,7 +124,7 @@ namespace _logger
     bool logFilter(const char *tag);
 #endif
 
-    const char *filepathToName(const char *path);
+    const char *filePathToName(const char *path);
     void assertion(bool flag, const char *file, int line, const char *func, const char *expr, const char *message = "");
 }
 
@@ -208,23 +201,23 @@ namespace _logger
 #if LOG_PRINT_TYPE == LOG_PRINT_TYPE_STD_FORMAT || LOG_PRINT_TYPE == LOG_PRINT_TYPE_FMT_FORMAT || LOG_PRINT_TYPE == LOG_PRINT_TYPE_CUSTOM_FORMAT
 #define __LOG_TAG_FORMAT(loglevel, color, tag, format) color loglevel "[{}] " format _LOG_RESET_COLOR LOG_EOL, tag
 #define __LOG_TAG_TIME_FORMAT(loglevel, color, tag, format) color "[{}]" loglevel "[{}] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), tag
-#define __LOG_TAG_FILE_FORMAT(loglevel, color, tag, format) color loglevel "[{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, tag, _logger::filepathToName(__FILE__), __LINE__
-#define __LOG_TAG_TIME_FILE_FORMAT(loglevel, color, tag, format) color "[{}]" loglevel "[{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), tag, _logger::filepathToName(__FILE__), __LINE__
+#define __LOG_TAG_FILE_FORMAT(loglevel, color, tag, format) color loglevel "[{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, tag, _logger::filePathToName(__FILE__), __LINE__
+#define __LOG_TAG_TIME_FILE_FORMAT(loglevel, color, tag, format) color "[{}]" loglevel "[{}][{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), tag, _logger::filePathToName(__FILE__), __LINE__
 
 #define __LOG_FORMAT(loglevel, color, format) color loglevel " " format _LOG_RESET_COLOR LOG_EOL
 #define __LOG_TIME_FORMAT(loglevel, color, format) color "[{}]" loglevel " " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime()
-#define __LOG_FILE_FORMAT(loglevel, color, format) color loglevel "[{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _logger::filepathToName(__FILE__), __LINE__
-#define __LOG_TIME_FILE_FORMAT(loglevel, color, format) color "[{}]" loglevel "[{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), _logger::filepathToName(__FILE__), __LINE__
+#define __LOG_FILE_FORMAT(loglevel, color, format) color loglevel "[{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _logger::filePathToName(__FILE__), __LINE__
+#define __LOG_TIME_FILE_FORMAT(loglevel, color, format) color "[{}]" loglevel "[{}:{}] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), _logger::filePathToName(__FILE__), __LINE__
 #else
 #define __LOG_TAG_FORMAT(loglevel, color, tag, format) color loglevel "[%s] " format _LOG_RESET_COLOR LOG_EOL, tag
 #define __LOG_TAG_TIME_FORMAT(loglevel, color, tag, format) color "[%s]" loglevel "[%s] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), tag
-#define __LOG_TAG_FILE_FORMAT(loglevel, color, tag, format) color loglevel "[%s][%s:%d] " format _LOG_RESET_COLOR LOG_EOL, tag, _logger::filepathToName(__FILE__), __LINE__
-#define __LOG_TAG_TIME_FILE_FORMAT(loglevel, color, tag, format) color "[%s]" loglevel "[%s][%s:%d] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), tag, _logger::filepathToName(__FILE__), __LINE__
+#define __LOG_TAG_FILE_FORMAT(loglevel, color, tag, format) color loglevel "[%s][%s:%d] " format _LOG_RESET_COLOR LOG_EOL, tag, _logger::filePathToName(__FILE__), __LINE__
+#define __LOG_TAG_TIME_FILE_FORMAT(loglevel, color, tag, format) color "[%s]" loglevel "[%s][%s:%d] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), tag, _logger::filePathToName(__FILE__), __LINE__
 
 #define __LOG_FORMAT(loglevel, color, format) color loglevel " " format _LOG_RESET_COLOR LOG_EOL
 #define __LOG_TIME_FORMAT(loglevel, color, format) color "[%s]" loglevel " " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime()
-#define __LOG_FILE_FORMAT(loglevel, color, format) color loglevel "[%s:%d] " format _LOG_RESET_COLOR LOG_EOL, _logger::filepathToName(__FILE__), __LINE__
-#define __LOG_TIME_FILE_FORMAT(loglevel, color, format) color "[%s]" loglevel "[%s:%d] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), _logger::filepathToName(__FILE__), __LINE__
+#define __LOG_FILE_FORMAT(loglevel, color, format) color loglevel "[%s:%d] " format _LOG_RESET_COLOR LOG_EOL, _logger::filePathToName(__FILE__), __LINE__
+#define __LOG_TIME_FILE_FORMAT(loglevel, color, format) color "[%s]" loglevel "[%s:%d] " format _LOG_RESET_COLOR LOG_EOL, _logger::formatTime(), _logger::filePathToName(__FILE__), __LINE__
 #endif // LOG_PRINT_TYPE == LOG_PRINT_TYPE_STD_FORMAT || LOG_PRINT_TYPE == LOG_PRINT_TYPE_FMT_FORMAT
 
 // Format without tag
@@ -257,46 +250,82 @@ namespace _logger
 
 // Assert macros
 
-#ifndef STRINGIFY
-#define STRINGIFY_1(...) #__VA_ARGS__
-#define STRINGIFY(...) STRINGIFY_1(__VA_ARGS__)
-#endif
-
-#if LOG_LEVEL != LOG_LEVEL_DISABLE
-#define ASSERT(condition, msg) _logger::assertion((condition), _logger::filepathToName(__FILE__), __LINE__, __func__, #condition, msg)
+#ifndef NDEBUG
+#define ASSERT(condition, msg) _logger::assertion((condition), __FILE__, __LINE__, __func__, #condition, msg)
 #else
 #define ASSERT(condition, msg) ((void)0)
 #endif
 
 // Print macros
 
+#if LOG_LEVEL != LOG_LEVEL_DISABLE
 #define LOG_BEGIN(baud) LOG_OUTPUT.begin(baud)
 #define LOG_PRINT(msg) LOG_OUTPUT.print(msg)
 #define LOG_PRINTLN(msg) LOG_OUTPUT.println(msg)
+#else
+#define LOG_BEGIN(baud)
+#define LOG_PRINT(msg)
+#define LOG_PRINTLN(msg)
+#endif
 
-// Printf macro based on LOG_PRINT_TYPE
+/**--------------------------------------------------------------------------------------
+ * Logger Print Macros
+ *-------------------------------------------------------------------------------------*/
 
-// Use C++20 std::format
+// Use std::format (C++20)
 #if LOG_PRINT_TYPE == LOG_PRINT_TYPE_STD_FORMAT
-#include <format> // Use the C++20 format library
-#define LOG_PRINTF(msg, ...) LOG_OUTPUT.print(std::format(msg, ##__VA_ARGS__).c_str())
+#include <format>
+#define LOG_PRINTF(msg, ...)                                                                                       \
+    do                                                                                                             \
+    {                                                                                                              \
+        char buffer[LOG_STATIC_BUFFER_SIZE];                                                                       \
+        std::format_to_n_result result = std::format_to_n(buffer, LOG_STATIC_BUFFER_SIZE - 1, msg, ##__VA_ARGS__); \
+        if (result.size < LOG_STATIC_BUFFER_SIZE)                                                                  \
+        {                                                                                                          \
+            buffer[result.size] = '\0';                                                                            \
+            LOG_OUTPUT.print(buffer);                                                                              \
+        }                                                                                                          \
+        else                                                                                                       \
+        {                                                                                                          \
+            char larger_buffer[result.size + 1];                                                                   \
+            std::format_to_n(larger_buffer, result.size, msg, ##__VA_ARGS__);                                      \
+            larger_buffer[result.size] = '\0';                                                                     \
+            LOG_OUTPUT.print(larger_buffer);                                                                       \
+        }                                                                                                          \
+    } while (0)
+
 // Use fmtlib fmt::format
 #elif LOG_PRINT_TYPE == LOG_PRINT_TYPE_FMT_FORMAT
-#define FMT_HEADER_ONLY // Use the header only because compiling the source with the Arduino build system is difficult. Remove src folder from the fmtlib to fix compile error. https://github.com/fmtlib/fmt - https://github.com/DarkWizarD24/fmt-arduino
-#pragma push_macro("F") // Backup conflicting macros
-#pragma push_macro("B1")
-#undef B1 // Disable conflicting macros
-#undef F
-#include <fmt/core.h>  // Include the library
-#pragma pop_macro("F") // Restore conflicting macros
-#pragma pop_macro("B1")
-#define LOG_PRINTF(msg, ...) LOG_OUTPUT.print(fmt::format(msg, ##__VA_ARGS__).c_str())
-// Default to printf
+#include <fmt.h>        // lib_deps = https://github.com/RileyCornelius/fmt-arduino.git
+#include <fmt/ranges.h> // Include the ranges support for fmtlib
+#define LOG_PRINTF(msg, ...)                                            \
+    do                                                                  \
+    {                                                                   \
+        fmt::basic_memory_buffer<char, LOG_STATIC_BUFFER_SIZE> buffer;  \
+        fmt::format_to(std::back_inserter(buffer), msg, ##__VA_ARGS__); \
+        buffer.push_back('\0');                                         \
+        LOG_OUTPUT.print(buffer.data());                                \
+    } while (0)
+
+// Use custom format lib afmt::format
 #elif LOG_PRINT_TYPE == LOG_PRINT_TYPE_CUSTOM_FORMAT
-#define LOG_PRINTF(msg, ...) _logger::print(msg, ##__VA_ARGS__)
+#define AFMT_DEFAULT_INTERNAL_SMALL_BUFFER_SIZE LOG_STATIC_BUFFER_SIZE
+#include "format.h"
+#define LOG_PRINTF(msg, ...)                         \
+    do                                               \
+    {                                                \
+        afmt::buffer buf;                            \
+        afmt::format_to(buf, format, ##__VA_ARGS__); \
+        LOG_OUTPUT.print(buf.c_str());               \
+    } while (0)
+
 #else
 #define LOG_PRINTF(msg, ...) _logger::printf(msg, ##__VA_ARGS__)
 #endif
+
+/**--------------------------------------------------------------------------------------
+ * Logger Log Macros
+ *-------------------------------------------------------------------------------------*/
 
 // Log without tag
 

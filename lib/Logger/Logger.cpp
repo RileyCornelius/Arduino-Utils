@@ -5,7 +5,7 @@ namespace _logger
 #if LOG_LEVEL > LOG_LEVEL_DISABLE && LOG_PRINT_TYPE == LOG_PRINT_TYPE_PRINTF
     void vprintf(const char *format, va_list arg)
     {
-        char buf[64];
+        char buf[LOG_STATIC_BUFFER_SIZE];
         char *temp = buf;
         va_list copy;
         va_copy(copy, arg);
@@ -90,7 +90,7 @@ namespace _logger
     }
 #endif // LOG_LOG_FILTER != LOG_FILTER_DISABLE
 
-    const char *filepathToName(const char *path)
+    const char *filePathToName(const char *path)
     {
         size_t i = 0;
         size_t pos = 0;
@@ -119,6 +119,7 @@ namespace _logger
             return;
         }
 
+        file = filePathToName(file);
         char buff[256];
 #if LOG_COLOR == LOG_COLOR_ENABLE
         snprintf(buff, sizeof(buff), _LOG_COLOR_E "[ASSERT] %s:%d - %s(): (%s) => %s" _LOG_RESET_COLOR, file, line, func, expr, message);
@@ -126,7 +127,6 @@ namespace _logger
         snprintf(buff, sizeof(buff), "[ASSERT] %s:%d - %s(): (%s) => %s", file, line, func, expr, message);
 #endif
 
-        LOG_PRINTLN();
         LOG_PRINTLN(buff);
         LOG_PRINTLN();
 
