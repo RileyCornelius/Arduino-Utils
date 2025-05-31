@@ -44,6 +44,11 @@ void linkedListLoop();
 void loggerSetup();
 void loggerLoop();
 
+// OptionalTest.cpp
+
+void optionalSetup();
+void optionalLoop();    
+
 //  SimpleStateMachineTest.cpp
 
 void simpleStateMachineSetup();

@@ -7,13 +7,14 @@ void setup()
   Serial.begin(115200);
   delay(1000);
 
-  loggerSetup();
   Serial.print("C++ version: ");
   Serial.println(__cplusplus);
   // LOG_I("Starting tests...");
+
+  optionalSetup();
 }
 
 void loop()
 {
-  loggerLoop();
+  optionalLoop();
 }
